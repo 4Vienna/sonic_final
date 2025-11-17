@@ -31,7 +31,7 @@ while running:
     screen.fill((0, 0, 0))
     sonic = Sonic(2)
     sonic.draw(screen, (100, 100))
-    sonic.set_state("push_3")
+    sonic.set_state("pipe_cling_1")
     sonic.draw(screen, (300, 100))
     sonic.set_state("roll_1")
     sonic.draw(screen, (500, 100))
