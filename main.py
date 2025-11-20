@@ -1,16 +1,13 @@
 import pygame
 from sprites_code.sprite_classes import Sonic
 
-
-current_sonic_state = "bored_2"
-
 pygame.init()
 
 screen = pygame.display.set_mode((800, 600))
 
 sprite_sheet = pygame.image.load('resources\\sonic_sprites.png').convert_alpha()
 sprite_sheet.set_colorkey((67, 153, 49))
-
+sonic = Sonic(2)
 
 
 
@@ -27,14 +24,21 @@ while running:
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             running = False
+        keys = pygame.key.get_pressed()
+        if event.type == pygame.KEYDOWN:
+            if event.key == pygame.K_ESCAPE:
+                running = False
+            if keys[pygame.K_d]:
+                sonic.walk()
+                sonic.change = 3
+        if event.type == pygame.KEYUP:
+            if event.key == pygame.K_d:
+                sonic.set_state("idle")
+                sonic.change = 0
+
 
     screen.fill((0, 0, 0))
-    sonic = Sonic(2)
     sonic.draw(screen, (100, 100))
-    sonic.set_state("pipe_1")
-    sonic.draw(screen, (300, 100))
-    sonic.set_state("roll_1")
-    sonic.draw(screen, (500, 100))
 
 
     pygame.display.flip()

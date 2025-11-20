@@ -17,6 +17,7 @@ class sprite():
         self.ratio = 2
         self.state = state
         self.img = None
+        self.change = 0
 
     def set_data(self):
         if self.state is not None and self.name is not None:
@@ -52,3 +53,18 @@ class Sonic(sprite):
 
     def set_state(self, new_state):
         self.state = new_state
+
+    def walk(self):
+        self.x += self.change
+        if self.state == "walk_1":
+            self.set_state("walk_2")
+        elif self.state == "walk_2":
+            self.set_state("walk_3")
+        elif self.state == "walk_3":
+            self.set_state("walk_4")
+        elif self.state == "walk_4":
+            self.set_state("walk_5")
+        elif self.state == "walk_5":
+            self.set_state("walk_6")
+        else:
+            self.set_state("walk_1")
