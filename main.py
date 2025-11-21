@@ -10,7 +10,8 @@ sprite_sheet.set_colorkey((67, 153, 49))
 sonic = Sonic(2)
 player_move = False
 
-
+last_update = pygame.time.get_ticks()
+animation_cooldown = 500
 
 
 def get_sprite_image(x, y, width, height, colorkey=None):

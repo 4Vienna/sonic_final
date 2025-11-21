@@ -20,6 +20,7 @@ class sprite():
         self.change = 0
         self.speed = 0
         self.move_type = None
+        self.frame = 0
 
     def set_data(self):
         if self.state is not None and self.name is not None:
@@ -67,5 +68,4 @@ class Sonic(sprite):
         self.speed *= self.change
         self.x += self.speed
         images = self.get_animation_frames()
-        for image in images:
-            self.set_state(image)
+        self.set_state(self.frame)
