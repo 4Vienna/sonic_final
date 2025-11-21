@@ -11,13 +11,15 @@ class sprite():
     def __init__(self,ratio, state=None):
         self.name = None
         self.x = 0
-        self.y = 0
+        self.y = 200
         self.width = 0
         self.height = 0
         self.ratio = 2
         self.state = state
         self.img = None
         self.change = 0
+        self.speed = 0
+        self.move_type = None
 
     def set_data(self):
         if self.state is not None and self.name is not None:
@@ -42,6 +44,13 @@ class sprite():
             self.resize_image()
             surface.blit(self.img, position)
 
+    def get_animation_frames(self):
+        animations = []
+        for image in get_sprite_data(f"{self.name}"):
+            if image.state.include(self.move_type):
+                animations.append(self.state)
+        return animations
+
     def set_state(self):
         pass
 
@@ -54,17 +63,9 @@ class Sonic(sprite):
     def set_state(self, new_state):
         self.state = new_state
 
-    def walk(self):
-        self.x += self.change
-        if self.state == "walk_1":
-            self.set_state("walk_2")
-        elif self.state == "walk_2":
-            self.set_state("walk_3")
-        elif self.state == "walk_3":
-            self.set_state("walk_4")
-        elif self.state == "walk_4":
-            self.set_state("walk_5")
-        elif self.state == "walk_5":
-            self.set_state("walk_6")
-        else:
-            self.set_state("walk_1")
+    def move(self):
+        self.speed *= self.change
+        self.x += self.speed
+        images = self.get_animation_frames()
+        for image in images:
+            self.set_state(image)
