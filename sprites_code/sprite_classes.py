@@ -1,6 +1,6 @@
 import pygame
 
-from sprites_code.sprite_manager import get_sprite_data
+from sprites_code.sprite_manager import get_sprite_data, get_all_sprites_of_type
 
 screen = pygame.display.set_mode((800, 600))
 
@@ -24,8 +24,7 @@ class sprite():
 
     def set_data(self):
         if self.state is not None and self.name is not None:
-            (self.x,self.y,self.width,self.height) = get_sprite_data(f"sonic_{self.state}")
-
+            (self.x,self.y,self.width,self.height) = get_sprite_data(f"{self.name}_{self.state}")
 
     def set_image(self, colorkey=None):
         image = pygame.Surface((self.width, self.height), pygame.SRCALPHA)
@@ -44,13 +43,12 @@ class sprite():
         if self.img is not None:
             self.resize_image()
             surface.blit(self.img, position)
-
-    def get_animation_frames(self):
-        animations = []
+    
+    def get_states(self):
+        states = []
         for image in get_sprite_data(f"{self.name}"):
-            if image.state.include(self.move_type):
-                animations.append(self.state)
-        return animations
+            states.append(image.state)
+        return states
 
     def set_state(self):
         pass
@@ -67,5 +65,7 @@ class Sonic(sprite):
     def move(self):
         self.speed *= self.change
         self.x += self.speed
-        images = self.get_animation_frames()
-        self.set_state(f"{self.move_type}_{self.frame}")
+        images = get_all_sprites_of_type(self.name, self.move_type)
+        if self.frame >= len(images):
+            self.frame = 0
+        self.set_state(images[self.frame])

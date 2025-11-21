@@ -48,7 +48,7 @@ while running:
     else:
         if sonic.speed > 0:
             sonic.change = -.2
-            sonic.run()
+            sonic.move()
         else:
             sonic.change = 0
             sonic.set_state("idle")

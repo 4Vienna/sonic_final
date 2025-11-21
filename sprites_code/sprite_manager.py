@@ -15,3 +15,11 @@ with open(csv_file, newline='') as csvfile:
 
 def get_sprite_data(sprite_name):
     return sprites_data.get(sprite_name, None)
+
+def get_all_sprites_of_type(sprite_name, sprite_type):
+    result = []
+    for sprite in sprites_data.keys():
+        if sprite.startswith(sprite_name) and sprite_type in sprite:
+            sprite = sprite.replace(f"{sprite_name}_", "")
+            result.append(sprite)
+    return result
