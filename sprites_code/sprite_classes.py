@@ -68,4 +68,4 @@ class Sonic(sprite):
         self.speed *= self.change
         self.x += self.speed
         images = self.get_animation_frames()
-        self.set_state(self.frame)
+        self.set_state(f"{self.move_type}_{self.frame}")

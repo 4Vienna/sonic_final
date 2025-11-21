@@ -38,8 +38,12 @@ while running:
             
 
     if player_move:
+        current_time = pygame.time.get_ticks()
+        if current_time - last_update >= animation_cooldown:
+            sonic.frame += 1
+            last_update = current_time
         sonic.move_type = "walk"
-        sonic.change = 2
+        sonic.change = .2
         sonic.move()
     else:
         if sonic.speed > 0:
