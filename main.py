@@ -3,7 +3,7 @@ from sprites_code.sprite_classes import Sonic
 
 pygame.init()
 
-screen = pygame.display.set_mode((800, 600))
+screen = pygame.display.set_mode((640, 448))
 
 sprite_sheet = pygame.image.load('resources\\sonic_sprites.png').convert_alpha()
 sprite_sheet.set_colorkey((67, 153, 49))
@@ -11,7 +11,6 @@ sonic = Sonic(2)
 player_move = False
 
 last_update = pygame.time.get_ticks()
-animation_cooldown = 500
 
 
 def get_sprite_image(x, y, width, height, colorkey=None):
@@ -38,19 +37,25 @@ while running:
             
 
     if player_move:
+        if sonic.speed == 0:
+            sonic.speed = 2
+        if sonic.change == 0:
+            sonic.change = 1.2
+
         current_time = pygame.time.get_ticks()
-        if current_time - last_update >= animation_cooldown:
+        if current_time - last_update >= sonic.animation_cooldown:
             sonic.frame += 1
             last_update = current_time
         sonic.move_type = "walk"
-        sonic.change = .2
+        sonic.change *= 1.2
         sonic.move()
     else:
         if sonic.speed > 0:
-            sonic.change = -.2
+            sonic.change *= -.2
             sonic.move()
         else:
             sonic.change = 0
+            sonic.frame = 99
             sonic.set_state("idle")
 
 
