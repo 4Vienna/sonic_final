@@ -38,18 +38,24 @@ while running:
             if keys[pygame.K_a]:
                 player_move = True
                 sonic.change = -12
+                if sonic.direction == "right":
+                    sonic.move_type = "skid"
                 if sonic.speed <= 0:
                     sonic.direction = "left"
                     
         if event.type == pygame.KEYUP:
             if event.key == pygame.K_d:
                 player_move = False
-                # On key release begin deceleration: make sure change is a
-                # small negative value so speed will be reduced toward zero.
                 if sonic.change == 0:
-                    sonic.change = -2
+                    sonic.change = -128
                 else:
                     sonic.change = -abs(sonic.change)
+            if event.key == pygame.K_a:
+                player_move = False
+                if sonic.change == 0:
+                    sonic.change = 128
+                else:
+                    sonic.change = abs(sonic.change)
             
 
     if player_move:
@@ -57,22 +63,22 @@ while running:
         if current_time - last_update >= sonic.animation_cooldown:
             sonic.frame += 1
             last_update = current_time
-        sonic.move_type = "walk"
+        if sonic.move_type == "skid":
+            if (sonic.direction == "right" and sonic.speed < 0) or (sonic.direction == "left" and sonic.speed > 0):
+                sonic.move_type = "skid"
+            else:
+                sonic.move_type = "walk"
+        else:
+            sonic.move_type = "walk"
         sonic.move(SCREEN_WIDTH)
         
     else:
-        if sonic.speed > 0:
+        if (sonic.speed > 0 and sonic.direction == "right") or (sonic.speed < 0 and sonic.direction == "left"):
             current_time = pygame.time.get_ticks()
             if current_time - last_update >= sonic.animation_cooldown:
                 sonic.frame += 1
                 last_update = current_time
             sonic.move_type = "walk"
-            # If change was accidentally zero, use a small negative decel;
-            # otherwise, ensure it's negative (don't flip sign each frame).
-            if sonic.change == 0:
-                sonic.change = -2
-            else:
-                sonic.change = -abs(sonic.change)
             sonic.move(SCREEN_WIDTH)
         else:
             sonic.change = 0
