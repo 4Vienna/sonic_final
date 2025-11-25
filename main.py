@@ -32,16 +32,24 @@ while running:
                 running = False
             if keys[pygame.K_d]:
                 player_move = True
-                sonic.direction = "right"
                 sonic.change = 12
+                if sonic.speed >= 0:
+                    sonic.direction = "right"
             if keys[pygame.K_a]:
                 player_move = True
+                sonic.change = -12
                 if sonic.speed <= 0:
                     sonic.direction = "left"
-                    sonic.change = -12
+                    
         if event.type == pygame.KEYUP:
             if event.key == pygame.K_d:
                 player_move = False
+                # On key release begin deceleration: make sure change is a
+                # small negative value so speed will be reduced toward zero.
+                if sonic.change == 0:
+                    sonic.change = -2
+                else:
+                    sonic.change = -abs(sonic.change)
             
 
     if player_move:
@@ -59,7 +67,12 @@ while running:
                 sonic.frame += 1
                 last_update = current_time
             sonic.move_type = "walk"
-            sonic.change *= -1
+            # If change was accidentally zero, use a small negative decel;
+            # otherwise, ensure it's negative (don't flip sign each frame).
+            if sonic.change == 0:
+                sonic.change = -2
+            else:
+                sonic.change = -abs(sonic.change)
             sonic.move(SCREEN_WIDTH)
         else:
             sonic.change = 0

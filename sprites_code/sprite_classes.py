@@ -86,8 +86,8 @@ class Sonic(sprite):
         if self.speed >= MAX_SPEED:
             self.speed = MAX_SPEED
         self.x += self.speed
-        if self.x >= width:
-            self.x = -self.width * self.ratio
+        if self.x >= (width - self.width * self.ratio):
+            self.x = width - (self.width * self.ratio)
         elif self.x < 0:
             self.x = 0
         images = get_all_sprites_of_type(self.name, self.move_type)
