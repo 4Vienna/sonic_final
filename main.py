@@ -9,6 +9,7 @@ sprite_sheet = pygame.image.load('resources\\sonic_sprites.png').convert_alpha()
 sprite_sheet.set_colorkey((67, 153, 49))
 sonic = Sonic(2)
 player_move = False
+SCREEN_WIDTH, SCREEN_HEIGHT = pygame.display.get_surface().get_size()
 
 last_update = pygame.time.get_ticks()
 
@@ -31,28 +32,35 @@ while running:
                 running = False
             if keys[pygame.K_d]:
                 player_move = True
+                sonic.direction = "right"
+                sonic.change = 12
+            if keys[pygame.K_a]:
+                player_move = True
+                if sonic.speed <= 0:
+                    sonic.direction = "left"
+                    sonic.change = -12
         if event.type == pygame.KEYUP:
             if event.key == pygame.K_d:
                 player_move = False
             
 
     if player_move:
-        if sonic.speed == 0:
-            sonic.speed = 2
-        if sonic.change == 0:
-            sonic.change = 1.2
-
         current_time = pygame.time.get_ticks()
         if current_time - last_update >= sonic.animation_cooldown:
             sonic.frame += 1
             last_update = current_time
         sonic.move_type = "walk"
-        sonic.change *= 1.2
-        sonic.move()
+        sonic.move(SCREEN_WIDTH)
+        
     else:
         if sonic.speed > 0:
-            sonic.change *= -.2
-            sonic.move()
+            current_time = pygame.time.get_ticks()
+            if current_time - last_update >= sonic.animation_cooldown:
+                sonic.frame += 1
+                last_update = current_time
+            sonic.move_type = "walk"
+            sonic.change *= -1
+            sonic.move(SCREEN_WIDTH)
         else:
             sonic.change = 0
             sonic.frame = 99
@@ -62,6 +70,5 @@ while running:
 
     screen.fill((0, 0, 0))
     sonic.draw(screen, (sonic.x, sonic.y))
-
 
     pygame.display.flip()

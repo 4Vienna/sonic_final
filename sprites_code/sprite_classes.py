@@ -18,10 +18,12 @@ class sprite():
         self.state = state
         self.img = None
         self.change = 0
+        self.speed_subpixels = 0
         self.speed = 0
         self.move_type = None
         self.frame = 0
-        self.animation_cooldown = 500
+        self.animation_cooldown = 10
+        self.direction = "right"
 
     def set_data(self):
         if self.state is not None and self.name is not None:
@@ -47,6 +49,8 @@ class sprite():
     def draw(self, surface, position):
         self.set_data()
         self.set_image()
+        if self.direction == "left" and self.img is not None:
+            self.img = pygame.transform.flip(self.img, True, False)
         if self.img is not None:
             self.resize_image()
             surface.blit(self.img, position)
@@ -69,26 +73,23 @@ class Sonic(sprite):
     def set_state(self, new_state):
         self.state = new_state
 
-    def move(self):
-        # Ensure speed and change are numeric values
-        try:
-            self.change = float(self.change)
-        except Exception:
-            self.change = 1.0
-        try:
-            self.speed = float(self.speed)
-        except Exception:
-            self.speed = 0.0
 
-        self.speed *= self.change
+    def move(self, width):
+        MAX_SPEED = 6
+        self.speed_subpixels += self.change
+        if self.speed_subpixels >= 256:
+            self.speed += self.speed_subpixels // 256
+            self.speed_subpixels = self.speed_subpixels % 256
+        elif self.speed_subpixels <= 0:
+            self.speed += (self.speed_subpixels // 256) - 1
+            self.speed_subpixels = 256 + (self.speed_subpixels % 256)
+        if self.speed >= MAX_SPEED:
+            self.speed = MAX_SPEED
         self.x += self.speed
-
-        # Compute animation cooldown safely; fall back to a default on error
-        try:
-            cooldown = 500 - (self.speed * 10)
-            self.animation_cooldown = max(50, int(cooldown))
-        except Exception:
-            self.animation_cooldown = 500
+        if self.x >= width:
+            self.x = -self.width * self.ratio
+        elif self.x < 0:
+            self.x = 0
         images = get_all_sprites_of_type(self.name, self.move_type)
         if self.frame >= len(images):
             self.frame = 0
