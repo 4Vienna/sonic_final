@@ -1,15 +1,16 @@
 import pygame
 from sprites_code.sprite_classes import Sonic
+from helpers.displays import screen, SCREEN_WIDTH, SCREEN_HEIGHT
 
 pygame.init()
 
-screen = pygame.display.set_mode((640, 448))
+
 
 sprite_sheet = pygame.image.load('resources\\sonic_sprites.png').convert_alpha()
 sprite_sheet.set_colorkey((67, 153, 49))
 sonic = Sonic(2)
 player_move = False
-SCREEN_WIDTH, SCREEN_HEIGHT = pygame.display.get_surface().get_size()
+
 
 last_update = pygame.time.get_ticks()
 
@@ -21,6 +22,10 @@ def get_sprite_image(x, y, width, height, colorkey=None):
         image.set_colorkey(colorkey)
     return image
 
+text_set = pygame.font.SysFont(None, 30)
+
+clock = pygame.time.Clock()
+FPS = 60
 running = True
 while running:
     for event in pygame.event.get():
@@ -33,55 +38,61 @@ while running:
             if keys[pygame.K_d]:
                 player_move = True
                 sonic.change = 12
-                if sonic.speed >= 0:
-                    sonic.direction = "right"
+                if sonic.speed <= 0 and sonic.direction == "left":
+                    sonic.move_type = "skid"
+                    sonic.change = 128
+                else:
+                    sonic.move_type = "walk"
+                # leaving idle; reset idle timer
+                sonic.idle_start_time = None
             if keys[pygame.K_a]:
                 player_move = True
                 sonic.change = -12
-                if sonic.speed <= 0:
-                    sonic.direction = "left"
+                if sonic.speed >= 0 and sonic.direction == "right":
+                    sonic.move_type = "skid"
+                    sonic.change = -128
+                else:
+                    sonic.move_type = "walk"
+                # leaving idle; reset idle timer
+                sonic.idle_start_time = None
                     
         if event.type == pygame.KEYUP:
-            if event.key == pygame.K_d:
+            if event.key == pygame.K_d or event.key == pygame.K_a:
                 player_move = False
-                # On key release begin deceleration: make sure change is a
-                # small negative value so speed will be reduced toward zero.
-                if sonic.change == 0:
-                    sonic.change = -2
+                if "push" in sonic.state:
+                    sonic.speed = 0 
+                    sonic.change = 0
+                elif sonic.speed > 0:
+                    sonic.change = -12
+                elif sonic.speed < 0:
+                    sonic.change = 12
                 else:
-                    sonic.change = -abs(sonic.change)
+                    sonic.change = 0
             
 
-    if player_move:
-        current_time = pygame.time.get_ticks()
-        if current_time - last_update >= sonic.animation_cooldown:
-            sonic.frame += 1
-            last_update = current_time
-        sonic.move_type = "walk"
-        sonic.move(SCREEN_WIDTH)
-        
+    if player_move: 
+        sonic.move()
     else:
-        if sonic.speed > 0:
-            current_time = pygame.time.get_ticks()
-            if current_time - last_update >= sonic.animation_cooldown:
-                sonic.frame += 1
-                last_update = current_time
-            sonic.move_type = "walk"
-            # If change was accidentally zero, use a small negative decel;
-            # otherwise, ensure it's negative (don't flip sign each frame).
-            if sonic.change == 0:
-                sonic.change = -2
-            else:
-                sonic.change = -abs(sonic.change)
-            sonic.move(SCREEN_WIDTH)
-        else:
-            sonic.change = 0
-            sonic.frame = 99
+        if abs(sonic.speed) != 0:
+            if "push" in sonic.state:
+                sonic.speed = 0 
+                sonic.change = 0
+            sonic.move()
+        elif abs(sonic.speed) == 0:
+            sonic.move_type = None
             sonic.set_state("idle")
+            sonic.change = 0
+            sonic.frame = 0
+            # start idle timer now
+            sonic.idle_start_time = pygame.time.get_ticks()
 
 
-
+    sonic.animation()
+    text_surface = text_set.render(f"Sonic position: {sonic.x}\n direction: {sonic.direction}\n speed subpixles: {sonic.speed_subpixels}\n speed: {sonic.speed}\n change: {sonic.change}\n state: {sonic.move_type}\n frame: {sonic.frame}", True, (255,255,255))
+    text_rect = text_surface.get_rect(topleft=(0, 0))
     screen.fill((0, 0, 0))
     sonic.draw(screen, (sonic.x, sonic.y))
+    screen.blit(text_surface, text_rect)
 
     pygame.display.flip()
+    clock.tick(FPS)
