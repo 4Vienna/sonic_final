@@ -55,12 +55,10 @@ while running:
                     sonic.move_type = "walk"
                 # leaving idle; reset idle timer
                 sonic.idle_start_time = None
-            if keys[pygame.K_SPACE]:
-                if sonic.move_type != "jump":
-                    sonic.move_type = "roll"
-                    sonic.x_change = 0
-                    # leaving idle; reset idle timer
-                    sonic.idle_start_time = None
+            if event.key == pygame.K_SPACE:
+                sonic.jump()
+                # leaving idle; reset idle timer
+                sonic.idle_start_time = None
             if keys[pygame.K_s]:
                 if sonic.move_type != "crouch" and sonic.x_change == 0 and sonic.speed == 0:
                     sonic.move_type = "crouch"
@@ -87,7 +85,9 @@ while running:
                     sonic.x_change = 0
             
 
-    if player_move: 
+    # Always update movement while player is actively moving or while
+    # Sonic is in the air (jumping) so gravity is applied.
+    if player_move or getattr(sonic, 'is_jumping', False): 
         sonic.move()
     else:
         if abs(sonic.speed) != 0:
@@ -109,7 +109,7 @@ while running:
 
 
     sonic.animation()
-    text_surface = text_set.render(f"Sonic position: {sonic.x}\n direction: {sonic.direction}\n speed subpixles: {sonic.speed_subpixels}\n speed: {sonic.speed}\n change: {sonic.x_change}\n state: {sonic.move_type}\n frame: {sonic.frame}", True, (255,255,255))
+    text_surface = text_set.render(f"Sonic position: {sonic.x} direction: {sonic.direction} speed: {sonic.speed} change: {sonic.x_change} state: {sonic.move_type} frame: {sonic.frame}", True, (255,255,255))
     text_rect = text_surface.get_rect(topleft=(0, 0))
     screen.fill((0, 0, 0))
     sonic.draw(screen, (sonic.x, sonic.y))

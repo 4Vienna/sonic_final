@@ -19,7 +19,6 @@ def get_sprite_data(sprite_name):
 def get_all_sprites_of_type(sprite_name, sprite_type):
     result = []
     for sprite in sprites_data.keys():
-        print(sprite)
         if sprite.startswith(sprite_name) and sprite_type in sprite:
             sprite = sprite.replace(f"{sprite_name}_", "")
             result.append(sprite)

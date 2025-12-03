@@ -18,7 +18,8 @@ class sprite():
         self.img = None
         self.x_change = 0
         self.y_change = 0
-        self.speed_subpixels = 0
+        self.speed_x_subpixels = 0
+        self.speed_y_subpixels = 0
         self.speed = 0
         self.move_type = None
         self.frame = 0
@@ -111,9 +112,23 @@ class Sonic(sprite):
         self.idle_start_time = None
         # maximum running speed (pixels) used to scale animation speed
         self.MAX_SPEED = 6
+        # Jump mechanics
+        self.is_jumping = False
+        self.GRAVITY = 0.5
+        self.JUMP_POWER = -12
+        self.GROUND_LEVEL = 200  # y position when on ground
+        self.speed_y = 0
 
     def set_state(self, new_state):
         self.state = new_state
+
+    def jump(self):
+        """Make Sonic jump if he's on the ground"""
+        if not self.is_jumping and self.y >= self.GROUND_LEVEL:
+            self.is_jumping = True
+            self.speed_y = self.JUMP_POWER
+            self.move_type = "roll"
+            self.frame = 0
 
     def waiting(self):
         now = pygame.time.get_ticks()
@@ -193,20 +208,20 @@ class Sonic(sprite):
     def move(self):
         MAX_SPEED = 6
 
-        self.speed_subpixels += self.x_change
+        self.speed_x_subpixels += self.x_change
 
         # Convert accumulated subpixels into whole-pixel speed changes
-        while self.speed_subpixels >= 256:
+        while self.speed_x_subpixels >= 256:
             self.speed += 1
-            self.speed_subpixels -= 256
+            self.speed_x_subpixels -= 256
 
-        while self.speed_subpixels <= -256:
+        while self.speed_x_subpixels <= -256:
             self.speed -= 1
-            self.speed_subpixels += 256
+            self.speed_x_subpixels += 256
 
         # Set speed to 0 if we get close to avoid glitches 
-        if self.speed == 0 and abs(self.speed_subpixels) < 1:
-            self.speed_subpixels = 0
+        if self.speed == 0 and abs(self.speed_x_subpixels) < 1:
+            self.speed_x_subpixels = 0
 
         # Set to never go over max speed
         if self.speed > MAX_SPEED:
@@ -222,6 +237,19 @@ class Sonic(sprite):
             self.direction = "right"
 
         self.x += self.speed
+        
+        # Vertical movement (gravity and jumping)
+        if self.is_jumping or self.y < self.GROUND_LEVEL:
+            self.speed_y += self.GRAVITY
+            self.y += self.speed_y
+            
+            # Check if we've hit the ground
+            if self.y >= self.GROUND_LEVEL:
+                self.y = self.GROUND_LEVEL
+                self.speed_y = 0
+                self.is_jumping = False
+                if self.move_type == "jump":
+                    self.move_type = "walk" if self.speed != 0 else None
         
         # Wall Collision
         collide = self.collision()
