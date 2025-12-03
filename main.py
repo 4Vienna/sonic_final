@@ -37,37 +37,54 @@ while running:
                 running = False
             if keys[pygame.K_d]:
                 player_move = True
-                sonic.change = 12
+                sonic.x_change = 12
                 if sonic.speed <= 0 and sonic.direction == "left":
                     sonic.move_type = "skid"
-                    sonic.change = 128
+                    sonic.x_change = 128
                 else:
                     sonic.move_type = "walk"
                 # leaving idle; reset idle timer
                 sonic.idle_start_time = None
             if keys[pygame.K_a]:
                 player_move = True
-                sonic.change = -12
+                sonic.x_change = -12
                 if sonic.speed >= 0 and sonic.direction == "right":
                     sonic.move_type = "skid"
-                    sonic.change = -128
+                    sonic.x_change = -128
                 else:
                     sonic.move_type = "walk"
                 # leaving idle; reset idle timer
                 sonic.idle_start_time = None
+            if keys[pygame.K_SPACE]:
+                if sonic.move_type != "jump":
+                    sonic.move_type = "roll"
+                    sonic.x_change = 0
+                    # leaving idle; reset idle timer
+                    sonic.idle_start_time = None
+            if keys[pygame.K_s]:
+                if sonic.move_type != "crouch" and sonic.x_change == 0 and sonic.speed == 0:
+                    sonic.move_type = "crouch"
+                    sonic.x_change = 0
+                    # leaving idle; reset idle timer
+                    sonic.idle_start_time = None
+                    
                     
         if event.type == pygame.KEYUP:
             if event.key == pygame.K_d or event.key == pygame.K_a:
                 player_move = False
                 if "push" in sonic.state:
                     sonic.speed = 0 
-                    sonic.change = 0
+                    sonic.x_change = 0
                 elif sonic.speed > 0:
-                    sonic.change = -12
+                    sonic.x_change = -12
                 elif sonic.speed < 0:
-                    sonic.change = 12
+                    sonic.x_change = 12
                 else:
-                    sonic.change = 0
+                    sonic.x_change = 0
+            if event.key == pygame.K_s:
+                if sonic.move_type == "crouch":
+                    sonic.move_type = None
+                    sonic.x_change = 0
             
 
     if player_move: 
@@ -76,19 +93,23 @@ while running:
         if abs(sonic.speed) != 0:
             if "push" in sonic.state:
                 sonic.speed = 0 
-                sonic.change = 0
+                sonic.x_change = 0
             sonic.move()
+        elif sonic.move_type == "crouch":
+            sonic.set_state("crouch")
+            sonic.x_change = 0
         elif abs(sonic.speed) == 0:
             sonic.move_type = None
             sonic.set_state("idle")
-            sonic.change = 0
+            sonic.x_change = 0
             sonic.frame = 0
             # start idle timer now
             sonic.idle_start_time = pygame.time.get_ticks()
+        
 
 
     sonic.animation()
-    text_surface = text_set.render(f"Sonic position: {sonic.x}\n direction: {sonic.direction}\n speed subpixles: {sonic.speed_subpixels}\n speed: {sonic.speed}\n change: {sonic.change}\n state: {sonic.move_type}\n frame: {sonic.frame}", True, (255,255,255))
+    text_surface = text_set.render(f"Sonic position: {sonic.x}\n direction: {sonic.direction}\n speed subpixles: {sonic.speed_subpixels}\n speed: {sonic.speed}\n change: {sonic.x_change}\n state: {sonic.move_type}\n frame: {sonic.frame}", True, (255,255,255))
     text_rect = text_surface.get_rect(topleft=(0, 0))
     screen.fill((0, 0, 0))
     sonic.draw(screen, (sonic.x, sonic.y))

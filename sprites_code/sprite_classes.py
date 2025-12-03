@@ -16,7 +16,8 @@ class sprite():
         self.ratio = ratio
         self.state = state
         self.img = None
-        self.change = 0
+        self.x_change = 0
+        self.y_change = 0
         self.speed_subpixels = 0
         self.speed = 0
         self.move_type = None
@@ -192,7 +193,7 @@ class Sonic(sprite):
     def move(self):
         MAX_SPEED = 6
 
-        self.speed_subpixels += self.change
+        self.speed_subpixels += self.x_change
 
         # Convert accumulated subpixels into whole-pixel speed changes
         while self.speed_subpixels >= 256:
@@ -234,17 +235,17 @@ class Sonic(sprite):
         # non-zero before switching to 'walk'. This preserves the
         # skid animation until Sonic truly reverses.
         if self.move_type == "skid":
-            if self.change != 0:
-                if (self.speed < 0 and self.change < 0):
+            if self.x_change != 0:
+                if (self.speed < 0 and self.x_change < 0):
                     if abs(self.speed) >= 1:
                         self.move_type = "walk"
                         self.frame = 0
-                        self.change = -12
-                elif (self.speed > 0 and self.change > 0):
+                        self.x_change = -12
+                elif (self.speed > 0 and self.x_change > 0):
                     if abs(self.speed) >= 1:
                         self.move_type = "walk"
                         self.frame = 0
-                        self.change = 12
+                        self.x_change = 12
 
 
         # Animation update
