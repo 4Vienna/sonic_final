@@ -2,6 +2,7 @@ import pygame
 
 from sprites_code.sprite_manager import get_sprite_data, get_all_sprites_of_type
 from helpers.displays import screen, SCREEN_WIDTH, SCREEN_HEIGHT
+from helpers.tilemap import check_ground_collision
 
 sprite_sheet = pygame.image.load('resources\\sonic_sprites.png').convert_alpha()
 sprite_sheet.set_colorkey((67, 153, 49))
@@ -116,8 +117,10 @@ class Sonic(sprite):
         self.is_jumping = False
         self.GRAVITY = 0.5
         self.JUMP_POWER = -12
-        self.GROUND_LEVEL = 200  # y position when on ground
+        self.GROUND_LEVEL = 200  # y position when on ground (will be overridden by tile collision)
         self.speed_y = 0
+        # Start above the ground so gravity pulls Sonic down
+        self.y = 0
 
     def set_state(self, new_state):
         self.state = new_state
@@ -238,18 +241,18 @@ class Sonic(sprite):
 
         self.x += self.speed
         
-        # Vertical movement (gravity and jumping)
-        if self.is_jumping or self.y < self.GROUND_LEVEL:
-            self.speed_y += self.GRAVITY
-            self.y += self.speed_y
-            
-            # Check if we've hit the ground
-            if self.y >= self.GROUND_LEVEL:
-                self.y = self.GROUND_LEVEL
-                self.speed_y = 0
-                self.is_jumping = False
-                if self.move_type == "jump":
-                    self.move_type = "walk" if self.speed != 0 else None
+        # Vertical movement (gravity always applies)
+        self.speed_y += self.GRAVITY
+        self.y += self.speed_y
+        
+        # Check tile collision
+        collision_y = check_ground_collision(self.x, self.y, self.width * self.ratio, self.height * self.ratio)
+        if collision_y is not None:
+            self.y = collision_y
+            self.speed_y = 0
+            self.is_jumping = False
+            if self.move_type == "jump" or self.move_type == "roll":
+                self.move_type = "walk" if self.speed != 0 else None
         
         # Wall Collision
         collide = self.collision()

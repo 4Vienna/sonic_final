@@ -1,6 +1,7 @@
 import pygame
 from sprites_code.sprite_classes import Sonic
 from helpers.displays import screen, SCREEN_WIDTH, SCREEN_HEIGHT
+from helpers.tilemap import load_background_collision_data
 
 pygame.init()
 
@@ -8,6 +9,8 @@ pygame.init()
 
 sprite_sheet = pygame.image.load('resources\\sonic_sprites.png').convert_alpha()
 sprite_sheet.set_colorkey((67, 153, 49))
+background = pygame.image.load('resources\\zones\\green_hill_1.png').convert_alpha()
+load_background_collision_data('resources\\zones\\green_hill_1.png')
 sonic = Sonic(2)
 player_move = False
 
@@ -111,7 +114,7 @@ while running:
     sonic.animation()
     text_surface = text_set.render(f"Sonic position: {sonic.x} direction: {sonic.direction} speed: {sonic.speed} change: {sonic.x_change} state: {sonic.move_type} frame: {sonic.frame}", True, (255,255,255))
     text_rect = text_surface.get_rect(topleft=(0, 0))
-    screen.fill((0, 0, 0))
+    screen.blit(background, (0, 0))
     sonic.draw(screen, (sonic.x, sonic.y))
     screen.blit(text_surface, text_rect)
 
