@@ -1,7 +1,13 @@
 import pygame
 from sprites_code.sprite_classes import Sonic
 from helpers.displays import screen, SCREEN_WIDTH, SCREEN_HEIGHT
-from helpers.tilemap import load_background_collision_data
+from sprites_code.build_background import TileMap
+
+# Load background image
+background_img = pygame.image.load('resources/backgrounds/green_hill_zone.png').convert_alpha()
+bg_width, bg_height = background_img.get_size()
+# Camera offset (world x position of left edge of screen)
+camera_x = 0
 
 pygame.init()
 
@@ -9,10 +15,13 @@ pygame.init()
 
 sprite_sheet = pygame.image.load('resources\\sonic_sprites.png').convert_alpha()
 sprite_sheet.set_colorkey((67, 153, 49))
-background = pygame.image.load('resources\\zones\\green_hill_1.png').convert_alpha()
-load_background_collision_data('resources\\zones\\green_hill_1.png')
 sonic = Sonic(2)
 player_move = False
+
+# Load tilemap for zone
+tilemap = TileMap('resources/zones/green_hill_1/green_hill_1_map.csv',
+                  'resources/zones/green_hill_1/green_hill_1_tiles.png',
+                  tile_size=16)
 
 
 last_update = pygame.time.get_ticks()
@@ -112,9 +121,24 @@ while running:
 
 
     sonic.animation()
+    screen.fill((0, 146, 255))
+    # Update camera based on Sonic's speed to create scrolling effect
+    # Move camera opposite to Sonic's movement so background scrolls as he runs
+    camera_x += sonic.speed
+    # Clamp camera within background bounds
+    max_camera_x = max(0, bg_width - SCREEN_WIDTH)
+    if camera_x < 0:
+        camera_x = 0
+    elif camera_x > max_camera_x:
+        camera_x = max_camera_x
+
+    # Draw background offset by camera
+    screen.blit(background_img, (-int(camera_x), 0))
+    # Draw tilemap (pre-rendered) with same camera offset so tiles scroll
+    if 'tilemap' in globals() and getattr(tilemap, 'map_surface', None) is not None:
+        screen.blit(tilemap.map_surface, (-int(camera_x), 0))
     text_surface = text_set.render(f"Sonic position: {sonic.x} direction: {sonic.direction} speed: {sonic.speed} change: {sonic.x_change} state: {sonic.move_type} frame: {sonic.frame}", True, (255,255,255))
     text_rect = text_surface.get_rect(topleft=(0, 0))
-    screen.blit(background, (0, 0))
     sonic.draw(screen, (sonic.x, sonic.y))
     screen.blit(text_surface, text_rect)
 

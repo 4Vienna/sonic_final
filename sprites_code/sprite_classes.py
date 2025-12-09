@@ -2,13 +2,14 @@ import pygame
 
 from sprites_code.sprite_manager import get_sprite_data, get_all_sprites_of_type
 from helpers.displays import screen, SCREEN_WIDTH, SCREEN_HEIGHT
-from helpers.tilemap import check_ground_collision
+
 
 sprite_sheet = pygame.image.load('resources\\sonic_sprites.png').convert_alpha()
 sprite_sheet.set_colorkey((67, 153, 49))
 
-class sprite():
+class sprite(pygame.sprite.Sprite):
     def __init__(self,ratio, state=None):
+        super().__init__()
         self.name = None
         self.x = 0
         self.y = 200
@@ -17,6 +18,7 @@ class sprite():
         self.ratio = ratio
         self.state = state
         self.img = None
+        self.rect = None
         self.x_change = 0
         self.y_change = 0
         self.speed_x_subpixels = 0
@@ -245,14 +247,11 @@ class Sonic(sprite):
         self.speed_y += self.GRAVITY
         self.y += self.speed_y
         
-        # Check tile collision
-        collision_y = check_ground_collision(self.x, self.y, self.width * self.ratio, self.height * self.ratio)
-        if collision_y is not None:
-            self.y = collision_y
+        # Ground collision
+        if self.y >= self.GROUND_LEVEL:
+            self.y = self.GROUND_LEVEL
             self.speed_y = 0
             self.is_jumping = False
-            if self.move_type == "jump" or self.move_type == "roll":
-                self.move_type = "walk" if self.speed != 0 else None
         
         # Wall Collision
         collide = self.collision()
