@@ -4,8 +4,7 @@ from sprites_code.sprite_manager import get_sprite_data, get_all_sprites_of_type
 from helpers.displays import screen, SCREEN_WIDTH, SCREEN_HEIGHT
 
 
-sprite_sheet = pygame.image.load('resources\\sonic_sprites.png').convert_alpha()
-sprite_sheet.set_colorkey((67, 153, 49))
+
 
 class sprite(pygame.sprite.Sprite):
     def __init__(self,ratio, state=None):
@@ -29,6 +28,9 @@ class sprite(pygame.sprite.Sprite):
         self.animation_cooldown = 10
         self.last_update = 0
         self.direction = "right"
+        self.sprite_sheet = None
+        self.GROUND_LEVEL = 200
+        self.GRAVITY = 0.5
 
     def set_data(self):
         if self.state is not None and self.name is not None:
@@ -42,7 +44,7 @@ class sprite(pygame.sprite.Sprite):
         image = pygame.Surface((self.width, self.height), pygame.SRCALPHA)
         sx = getattr(self, 'src_x', 0)
         sy = getattr(self, 'src_y', 0)
-        image.blit(sprite_sheet, (0, 0), (sx, sy, self.width, self.height))
+        image.blit(self.sprite_sheet, (0, 0), (sx, sy, self.width, self.height))
         if colorkey is not None:
             image.set_colorkey(colorkey)
         self.img = image
@@ -61,6 +63,12 @@ class sprite(pygame.sprite.Sprite):
             surface.blit(self.img, position)
     
     def collision(self):
+        # Ground collision
+        if self.y >= self.GROUND_LEVEL:
+            self.y = self.GROUND_LEVEL
+            self.speed_y = 0
+            self.is_jumping = False
+
         #wall collision
         if self.x >= (SCREEN_WIDTH - self.width * self.ratio):
             self.x = SCREEN_WIDTH - (self.width * self.ratio)
@@ -117,18 +125,15 @@ class Sonic(sprite):
         self.MAX_SPEED = 6
         # Jump mechanics
         self.is_jumping = False
-        self.GRAVITY = 0.5
         self.JUMP_POWER = -12
-        self.GROUND_LEVEL = 200  # y position when on ground (will be overridden by tile collision)
         self.speed_y = 0
-        # Start above the ground so gravity pulls Sonic down
-        self.y = 0
+        self.sprite_sheet = pygame.image.load('resources\\sonic_sprites.png').convert_alpha()
+        self.sprite_sheet.set_colorkey((67, 153, 49))
 
     def set_state(self, new_state):
         self.state = new_state
 
     def jump(self):
-        """Make Sonic jump if he's on the ground"""
         if not self.is_jumping and self.y >= self.GROUND_LEVEL:
             self.is_jumping = True
             self.speed_y = self.JUMP_POWER
@@ -257,13 +262,7 @@ class Sonic(sprite):
         collide = self.collision()
         if collide:
             self.move_type = "push"
-
-        # If we're currently skidding, only stop skidding once the
-        # character has actually started running the new direction.
-        # Use the sign of `change` (player input) to infer intended
-        # direction; require speed to have the same sign and be
-        # non-zero before switching to 'walk'. This preserves the
-        # skid animation until Sonic truly reverses.
+        # Skid logic
         if self.move_type == "skid":
             if self.x_change != 0:
                 if (self.speed < 0 and self.x_change < 0):
@@ -283,3 +282,37 @@ class Sonic(sprite):
         if self.frame >= len(images):
             self.frame = 0
         self.set_state(images[self.frame])
+
+class MotoBug(sprite):
+    def __init__(self,ratio,start, state="bug_1"):
+        super().__init__(ratio, state)
+        self.name = "moto_bug"
+        self.sprite_sheet = pygame.image.load('resources\\enemies.gif').convert_alpha()
+        self.sprite_sheet.set_colorkey((255, 0, 255))
+        self.change = 2
+        self.RANGE = 300
+        self.start = start
+        self.x = start
+
+    def move(self, sonic):
+        # Move left/right based on current direction.
+        if self.direction == "left":
+            self.x += self.change
+        else:
+            self.x -= self.change
+
+        # Flip direction if we've moved beyond patrol bounds
+        if abs(sonic.x - self.x) < 100:
+            if sonic.x < self.x:
+                self.direction = "left"
+                self.x -= self.change
+            else:
+                self.direction = "right"
+                self.x += self.change
+        elif self.x <= (self.start - self.RANGE):
+            self.x = self.start - self.RANGE
+            self.direction = "left"
+        elif self.x >= (self.start + self.RANGE):
+            self.x = self.start + self.RANGE
+            self.direction = "right"
+         

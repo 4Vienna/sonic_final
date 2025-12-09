@@ -1,5 +1,5 @@
 import pygame
-from sprites_code.sprite_classes import Sonic
+from sprites_code.sprite_classes import Sonic, MotoBug
 from helpers.displays import screen, SCREEN_WIDTH, SCREEN_HEIGHT
 from sprites_code.build_background import TileMap
 
@@ -13,9 +13,8 @@ pygame.init()
 
 
 
-sprite_sheet = pygame.image.load('resources\\sonic_sprites.png').convert_alpha()
-sprite_sheet.set_colorkey((67, 153, 49))
 sonic = Sonic(2)
+moto = MotoBug(2, 400)
 player_move = False
 
 # Load tilemap for zone
@@ -26,13 +25,6 @@ tilemap = TileMap('resources/zones/green_hill_1/green_hill_1_map.csv',
 
 last_update = pygame.time.get_ticks()
 
-
-def get_sprite_image(x, y, width, height, colorkey=None):
-    image = pygame.Surface((width, height), pygame.SRCALPHA)
-    image.blit(sprite_sheet, (0, 0), (x, y, width, height))
-    if colorkey is not None:
-        image.set_colorkey(colorkey)
-    return image
 
 text_set = pygame.font.SysFont(None, 30)
 
@@ -118,7 +110,7 @@ while running:
             # start idle timer now
             sonic.idle_start_time = pygame.time.get_ticks()
         
-
+    moto.move(sonic)
 
     sonic.animation()
     screen.fill((0, 146, 255))
@@ -139,7 +131,9 @@ while running:
         screen.blit(tilemap.map_surface, (-int(camera_x), 0))
     text_surface = text_set.render(f"Sonic position: {sonic.x} direction: {sonic.direction} speed: {sonic.speed} change: {sonic.x_change} state: {sonic.move_type} frame: {sonic.frame}", True, (255,255,255))
     text_rect = text_surface.get_rect(topleft=(0, 0))
+    
     sonic.draw(screen, (sonic.x, sonic.y))
+    moto.draw(screen, (moto.x, moto.y))
     screen.blit(text_surface, text_rect)
 
     pygame.display.flip()
