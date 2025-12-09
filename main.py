@@ -9,13 +9,16 @@ bg_width, bg_height = background_img.get_size()
 # Camera offset (world x position of left edge of screen)
 camera_x = 0
 
+# Inform sprites about the level/world width so collisions use world bounds
+set_level_width(bg_width)
+
 pygame.init()
 
 
 
 sonic = Sonic(2)
-moto = MotoBug(2, 400)
-bomb = bomber(800, 300, 2)
+enemies = [MotoBug(2, 400), Bomber(800, 300, 2), GreenNewtron(2), BlueNewtron(2), Chopper(2), Crabmeat(2)]
+
 player_move = False
 
 # Load tilemap for zone
@@ -111,19 +114,20 @@ while running:
             # start idle timer now
             sonic.idle_start_time = pygame.time.get_ticks()
         
-    moto.move(sonic)
 
     sonic.animation()
     screen.fill((0, 146, 255))
-    # Update camera based on Sonic's speed to create scrolling effect
-    # Move camera opposite to Sonic's movement so background scrolls as he runs
-    camera_x += sonic.speed
-    # Clamp camera within background bounds
+    # Camera behavior:
+    # - While Sonic is left of the screen center, keep the camera at 0 (start at edge)
+    # - Once Sonic passes the center, keep him visually centered until level end
     max_camera_x = max(0, bg_width - SCREEN_WIDTH)
-    if camera_x < 0:
+    half_screen = SCREEN_WIDTH // 2
+    if sonic.x <= half_screen:
         camera_x = 0
-    elif camera_x > max_camera_x:
-        camera_x = max_camera_x
+    else:
+        camera_x = sonic.x - half_screen
+        if camera_x > max_camera_x:
+            camera_x = max_camera_x
 
     # Draw background offset by camera
     screen.blit(background_img, (-int(camera_x), 0))
@@ -133,9 +137,12 @@ while running:
     text_surface = text_set.render(f"Sonic position: {sonic.x} direction: {sonic.direction} speed: {sonic.speed} change: {sonic.x_change} state: {sonic.move_type} frame: {sonic.frame}", True, (255,255,255))
     text_rect = text_surface.get_rect(topleft=(0, 0))
     
-    sonic.draw(screen, (sonic.x, sonic.y))
-    bomb.draw(screen, (bomb.x, bomb.y))
-    moto.draw(screen, (moto.x, moto.y))
+    # Convert world coordinates to screen coordinates using camera_x
+    sonic_screen_x = int(sonic.x - camera_x)
+    sonic.draw(screen, (sonic_screen_x, int(sonic.y)))
+    for enemy in enemies:
+        enemy_screen_x = int(enemy.x - camera_x)
+        enemy.draw(screen, (enemy_screen_x, int(enemy.y)))
     screen.blit(text_surface, text_rect)
 
     pygame.display.flip()

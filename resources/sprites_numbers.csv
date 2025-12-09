@@ -36,6 +36,8 @@ buzz_bomber,attack_1,237,57,51,53
 buzz_bomber,attack_2,316,57,51,53
 bullet,yellow_1,393,68,12,12
 bullet,yellow_2,412,68,12,12
+bullet,red_1,474,15,12,12
+bullet,red_2,492,15,12,12
 green_newtron,green_newtron_1,12,124,36,38
 green_newtron,green_newtron_2,64,124,36,38
 blue_newtron,blue_newtron_1,134,124,36,38
@@ -46,4 +48,7 @@ blue_newtron,blue_newtron_5,382,139,48,16
 blue_newtron,blue_newtron_6,448,139,55,16
 chopper,chopper_1,487,63,30,32
 chopper,chopper_2,530,63,30,32
-crabmeat
+crabmeat,crabmeat_1,231,8,44,32
+crabmeat,crabmeat_2,290,8,44,32
+crabmeat,crabmeat_3,340,8,44,32
+crabmeat,crabmeat_4,412,8,49,32

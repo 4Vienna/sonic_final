@@ -31,7 +31,6 @@ class sprite(pygame.sprite.Sprite):
         self.sprite_sheet = None
         self.GROUND_LEVEL = 200
         self.GRAVITY = 0.5
-
     def set_data(self):
         if self.state is not None and self.name is not None:
             data = get_sprite_data(f"{self.name}_{self.state}")
@@ -70,8 +69,20 @@ class sprite(pygame.sprite.Sprite):
             self.is_jumping = False
 
         #wall collision
-        if self.x >= (SCREEN_WIDTH - self.width * self.ratio):
-            self.x = SCREEN_WIDTH - (self.width * self.ratio)
+        # Use level/world width if provided, otherwise fall back to screen width
+        try:
+            from sprites_code import sprite_classes as sc
+            LEVEL_WIDTH_LOCAL = getattr(sc, 'LEVEL_WIDTH', None)
+        except Exception:
+            LEVEL_WIDTH_LOCAL = None
+
+        if LEVEL_WIDTH_LOCAL is not None:
+            max_x = LEVEL_WIDTH_LOCAL - (self.width * self.ratio)
+        else:
+            max_x = SCREEN_WIDTH - (self.width * self.ratio)
+
+        if self.x >= max_x:
+            self.x = max_x
             return True
         elif self.x < 0:
             self.x = 0
@@ -107,6 +118,17 @@ class sprite(pygame.sprite.Sprite):
             pass
 
         self.last_update = now
+
+# Level/world width in pixels. Set from main when a level is loaded.
+LEVEL_WIDTH = None
+
+def set_level_width(w):
+    """Set the world width (in pixels) so sprites can use world bounds for collisions.
+
+    Call this from `main.py` after loading the background/tilemap: `set_level_width(bg_width)`.
+    """
+    global LEVEL_WIDTH
+    LEVEL_WIDTH = w
 
 
 class Sonic(sprite):
@@ -317,7 +339,7 @@ class MotoBug(sprite):
             self.direction = "right"
          
 
-class bomber(sprite):
+class Bomber(sprite):
     def __init__(self,x,y,ratio,state="attack_2"):
         super().__init__(ratio, state)
         self.name = "buzz_bomber"
@@ -325,3 +347,48 @@ class bomber(sprite):
         self.sprite_sheet.set_colorkey((255, 0, 255))
         self.x = x
         self.y = y
+
+
+class GreenNewtron(sprite):
+    def __init__(self,ratio,state="green_newtron_1"):
+        super().__init__(ratio, state)
+        self.name = "green_newtron"
+        self.sprite_sheet = pygame.image.load('resources\\enemies.gif').convert_alpha()
+        self.sprite_sheet.set_colorkey((255, 0, 255))
+        self.x = 600
+        self.y = 200
+
+    def attack(self, sonic):
+        if abs(sonic.x - self.x) < 200:
+            self.set_state("green_newtron_2")
+            
+            
+
+
+
+class BlueNewtron(sprite):
+    def __init__(self,ratio,state="blue_newtron_1"):
+        super().__init__(ratio, state)
+        self.name = "blue_newtron"
+        self.sprite_sheet = pygame.image.load('resources\\enemies.gif').convert_alpha()
+        self.sprite_sheet.set_colorkey((255, 0, 255))
+        self.x = 1000
+        self.y = 200
+
+class Chopper(sprite):
+    def __init__(self,ratio,state="chopper_1"):
+        super().__init__(ratio, state)
+        self.name = "chopper"
+        self.sprite_sheet = pygame.image.load('resources\\enemies.gif').convert_alpha()
+        self.sprite_sheet.set_colorkey((255, 0, 255))
+        self.x = 1200
+        self.y = 100
+
+class Crabmeat(sprite):
+    def __init__(self,ratio,state="crabmeat_1"):
+        super().__init__(ratio, state)
+        self.name = "crabmeat"
+        self.sprite_sheet = pygame.image.load('resources\\enemies.gif').convert_alpha()
+        self.sprite_sheet.set_colorkey((255, 0, 255))
+        self.x = 1400
+        self.y = 200
