@@ -316,3 +316,12 @@ class MotoBug(sprite):
             self.x = self.start + self.RANGE
             self.direction = "right"
          
+
+class bomber(sprite):
+    def __init__(self,x,y,ratio,state="attack_2"):
+        super().__init__(ratio, state)
+        self.name = "buzz_bomber"
+        self.sprite_sheet = pygame.image.load('resources\\enemies.gif').convert_alpha()
+        self.sprite_sheet.set_colorkey((255, 0, 255))
+        self.x = x
+        self.y = y

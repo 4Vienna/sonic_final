@@ -28,7 +28,22 @@ sonic,pipe_1,35,715,45,32
 moto_bug,bug_1,7,8,48,38
 moto_bug,bug_2,55,8,48,38
 moto_bug,bug_3,103,8,77,38
-buzz_bomber, bomber_1, 5, 57, 45, 26
-newtron
-chopper
+buzz_bomber,bomber_1,5,57,45,26
+buzz_bomber,bomber_2,60,57,45,26
+buzz_bomber,bomber_3,120,57,45,26
+buzz_bomber,bomber_4,175,57,45,26
+buzz_bomber,attack_1,237,57,51,53
+buzz_bomber,attack_2,316,57,51,53
+bullet,yellow_1,393,68,12,12
+bullet,yellow_2,412,68,12,12
+green_newtron,green_newtron_1,12,124,36,38
+green_newtron,green_newtron_2,64,124,36,38
+blue_newtron,blue_newtron_1,134,124,36,38
+blue_newtron,blue_newtron_2,182,124,36,38
+blue_newtron,blue_newtron_3,230,124,38,24
+blue_newtron,blue_newtron_4,332,139,42,16
+blue_newtron,blue_newtron_5,382,139,48,16
+blue_newtron,blue_newtron_6,448,139,55,16
+chopper,chopper_1,487,63,30,32
+chopper,chopper_2,530,63,30,32
 crabmeat

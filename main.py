@@ -1,5 +1,5 @@
 import pygame
-from sprites_code.sprite_classes import Sonic, MotoBug
+from sprites_code.sprite_classes import *
 from helpers.displays import screen, SCREEN_WIDTH, SCREEN_HEIGHT
 from sprites_code.build_background import TileMap
 
@@ -15,6 +15,7 @@ pygame.init()
 
 sonic = Sonic(2)
 moto = MotoBug(2, 400)
+bomb = bomber(800, 300, 2)
 player_move = False
 
 # Load tilemap for zone
@@ -133,6 +134,7 @@ while running:
     text_rect = text_surface.get_rect(topleft=(0, 0))
     
     sonic.draw(screen, (sonic.x, sonic.y))
+    bomb.draw(screen, (bomb.x, bomb.y))
     moto.draw(screen, (moto.x, moto.y))
     screen.blit(text_surface, text_rect)
 

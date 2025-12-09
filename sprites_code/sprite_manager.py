@@ -6,11 +6,22 @@ with open(csv_file, newline='') as csvfile:
     reader = csv.reader(csvfile)
     next(reader)  # Skip header row
     for row in reader:
+        # Trim whitespace around CSV fields to avoid keys with leading/trailing spaces
+        if not row:
+            continue
+        row = [cell.strip() for cell in row]
+        # skip malformed rows
+        if len(row) < 6:
+            continue
         sprite_name = f'{row[0]}_{row[1]}'
-        x = int(row[2])
-        y = int(row[3])
-        width = int(row[4])
-        height = int(row[5])
+        try:
+            x = int(row[2])
+            y = int(row[3])
+            width = int(row[4])
+            height = int(row[5])
+        except ValueError:
+            # Skip rows with non-integer coordinates
+            continue
         sprites_data[sprite_name] = (x, y, width, height)
 
 def get_sprite_data(sprite_name):
