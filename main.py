@@ -20,8 +20,8 @@ sonic = Sonic(2)
 # Player state: lives and simple invulnerability timer after being hit
 sonic.invulnerable_until = 0
 
-enemies = [MotoBug(2, 400), Bomber(800, 300, 2), GreenNewtron(2), BlueNewtron(2), Chopper(2), Crabmeat(2)]
-
+enemies = [GreenNewtron(2)]
+bullets = []
 player_move = False
 
 # Load tilemap for zone
@@ -46,7 +46,7 @@ while running:
         if event.type == pygame.KEYDOWN:
             if event.key == pygame.K_ESCAPE:
                 running = False
-            if keys[pygame.K_d]:
+            if keys[pygame.K_RIGHT]:
                 player_move = True
                 sonic.x_change = 12
                 if sonic.speed <= 0 and sonic.direction == "left":
@@ -56,7 +56,7 @@ while running:
                     sonic.move_type = "walk"
                 # leaving idle; reset idle timer
                 sonic.idle_start_time = None
-            if keys[pygame.K_a]:
+            if keys[pygame.K_LEFT]:
                 player_move = True
                 sonic.x_change = -12
                 if sonic.speed >= 0 and sonic.direction == "right":
@@ -70,7 +70,7 @@ while running:
                 sonic.jump()
                 # leaving idle; reset idle timer
                 sonic.idle_start_time = None
-            if keys[pygame.K_s]:
+            if keys[pygame.K_DOWN]:
                 if sonic.move_type != "crouch" and sonic.x_change == 0 and sonic.speed == 0:
                     sonic.move_type = "crouch"
                     sonic.x_change = 0
@@ -79,7 +79,7 @@ while running:
                     
                     
         if event.type == pygame.KEYUP:
-            if event.key == pygame.K_d or event.key == pygame.K_a:
+            if event.key == pygame.K_LEFT or event.key == pygame.K_RIGHT:
                 player_move = False
                 if "push" in sonic.state:
                     sonic.speed = 0 
@@ -145,11 +145,27 @@ while running:
     sonic.draw(screen, (sonic_screen_x, int(sonic.y)))
     for enemy in enemies:
         enemy_screen_x = int(enemy.x - camera_x)
-        enemy.move(sonic)
+        bullet = enemy.move(sonic)
+        if bullet is not None:
+            bullets.append(bullet)
+        if bullets:
+            for bullet in bullets:
+                bullet_screen_x = int(bullet.x - camera_x)
+                bullet.move()
+                bullet.draw(screen, (bullet_screen_x, int(bullet.y)))
+                # Check collision between Sonic and bullet
+                if sonic.enemy_collision(bullet, sonic_screen_x, bullet_screen_x):
+                    print("Sonic hit by bullet!")
+                    bullets.remove(bullet)
+                if bullet.x < 0 or bullet.x > bg_width:
+                    bullets.remove(bullet)
+               
+
         hit = sonic.enemy_collision(enemy, sonic_screen_x, enemy_screen_x)
         if hit is not None:
             # Handle enemy defeat logic here
             enemies.remove(hit)
+            print(f"Enemies left: {enemies}")
             print(f"Defeated {hit.name}!")
         enemy.draw(screen, (enemy_screen_x, int(enemy.y)))
 

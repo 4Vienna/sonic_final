@@ -29,7 +29,7 @@ class sprite(pygame.sprite.Sprite):
         self.last_update = 0
         self.direction = "right"
         self.sprite_sheet = None
-        self.GROUND_LEVEL = 200
+        self.GROUND_LEVEL = 500
         self.GRAVITY = 0.5
     def set_data(self):
         if self.state is not None and self.name is not None:
@@ -365,6 +365,24 @@ class Sonic(sprite):
             self.frame = 0
         self.set_state(images[self.frame])
 
+class Bullet(sprite):
+    def __init__(self,x,y,direction,ratio,color):
+        super().__init__(ratio)
+        self.name = "bullet"
+        self.state = f"{color}_1"
+        self.sprite_sheet = pygame.image.load('resources\\enemies.gif').convert_alpha()
+        self.sprite_sheet.set_colorkey((255, 0, 255))
+        self.direction = direction
+        self.speed = 2
+        self.x = x
+        self.y = y
+
+    def move(self, sonic):
+        if self.direction == "left":
+            self.x -= self.speed
+        else:
+            self.x += self.speed
+
 class MotoBug(sprite):
     def __init__(self,ratio,start, state="bug_1"):
         super().__init__(ratio, state)
@@ -374,7 +392,8 @@ class MotoBug(sprite):
         self.change = 2
         self.RANGE = 300
         self.start = start
-        self.x = start
+        self.x = 600
+        self.y = self.GROUND_LEVEL
 
     def move(self, sonic):
         # Move left/right based on current direction.
@@ -398,16 +417,18 @@ class MotoBug(sprite):
             self.x = self.start + self.RANGE
             self.direction = "right"
 
+        return None
+
          
 
 class Bomber(sprite):
-    def __init__(self,x,y,ratio,state="attack_2"):
+    def __init__(self, ratio,x,state="attack_2"):
         super().__init__(ratio, state)
         self.name = "buzz_bomber"
         self.sprite_sheet = pygame.image.load('resources\\enemies.gif').convert_alpha()
         self.sprite_sheet.set_colorkey((255, 0, 255))
         self.x = x
-        self.y = y
+        self.y = self.GROUND_LEVEL - 150
 
     def move(self, sonic):
         if abs(sonic.x - self.x) < 300:
@@ -415,6 +436,7 @@ class Bomber(sprite):
                 self.direction = "left"
             else:
                 self.direction = "right"
+        return None
             
 
 
@@ -425,14 +447,29 @@ class GreenNewtron(sprite):
         self.sprite_sheet = pygame.image.load('resources\\enemies.gif').convert_alpha()
         self.sprite_sheet.set_colorkey((255, 0, 255))
         self.x = 600
-        self.y = 200
+        self.y = self.GROUND_LEVEL
+
 
     def attack(self, sonic):
-        if abs(sonic.x - self.x) < 200:
-            self.state = "attack_2"
+        bullet = None
+        if abs(sonic.x - self.x) < 150:
+            self.state = "green_newtron_2"
+            if sonic.x < self.x:
+                self.direction = "right"
+                print("Firing bullet to the right")
+                return Bullet(self.x, self.y, self.direction, self.ratio, "yellow")
+            else:
+                self.direction = "left"
+                print("Firing bullet to the left")
+                return Bullet(self.x + self.width, self.y, self.direction, self.ratio, "yellow")
+        else:
+            self.state = "green_newtron_1"
+            return None
+
 
     def move(self, sonic):
         self.attack(sonic)
+        return None
             
             
 
@@ -442,11 +479,11 @@ class BlueNewtron(sprite):
         self.name = "blue_newtron"
         self.sprite_sheet = pygame.image.load('resources\\enemies.gif').convert_alpha()
         self.sprite_sheet.set_colorkey((255, 0, 255))
-        self.x = 1000
-        self.y = 200
+        self.x = 500
+        self.y = self.GROUND_LEVEL
 
     def move(self, sonic):
-        pass
+        return None
 
 class Chopper(sprite):
     def __init__(self,ratio,state="chopper_1"):
@@ -455,7 +492,7 @@ class Chopper(sprite):
         self.start = self.GROUND_LEVEL + 200
         self.sprite_sheet = pygame.image.load('resources\\enemies.gif').convert_alpha()
         self.sprite_sheet.set_colorkey((255, 0, 255))
-        self.x = 1200
+        self.x = self.GROUND_LEVEL
         self.y = self.start
         
     def move(self, sonic):
@@ -464,6 +501,7 @@ class Chopper(sprite):
         elif self.y >= self.start:
             self.y_change = -2
         self.y += self.y_change
+        return None
 
 class Crabmeat(sprite):
     def __init__(self,ratio,state="crabmeat_1"):
@@ -471,8 +509,8 @@ class Crabmeat(sprite):
         self.name = "crabmeat"
         self.sprite_sheet = pygame.image.load('resources\\enemies.gif').convert_alpha()
         self.sprite_sheet.set_colorkey((255, 0, 255))
-        self.x = 1400
-        self.y = 200
+        self.x = 400
+        self.y = self.GROUND_LEVEL
 
     def move(self, sonic):
-        pass
+        return None
