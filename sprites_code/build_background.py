@@ -19,8 +19,11 @@ class Tile():
         surface.blit(tileset, (self.x, self.y), src_rect)
 
 class TileMap():
-    def __init__(self, map_csv_filename, tileset_filename=None, tile_size=16):
+    def __init__(self, map_csv_filename, tileset_filename=None, tile_size=16, scale=1.0):
+        # tile_size: source tileset tile size (pixels)
+        # scale: final scale factor to apply to the rendered map surface
         self.tile_size = tile_size
+        self.scale = float(scale) if scale is not None else 1.0
         # load tiles from csv
         self.tiles = self.load_tiles(map_csv_filename)
 
@@ -34,7 +37,7 @@ class TileMap():
         except Exception:
             self.tileset = None
 
-        # compute map surface
+        # compute map surface at source size
         self.map_surface = pygame.Surface((self.map_width, self.map_height), pygame.SRCALPHA)
         if self.tileset is not None:
             self.tileset.set_colorkey((0,0,0))
@@ -43,6 +46,16 @@ class TileMap():
             self.tiles_per_row = 1
 
         self.load_map()
+
+        # If a scale other than 1.0 is requested, scale the pre-rendered map surface
+        if self.scale != 1.0:
+            scaled_w = max(1, int(self.map_width * self.scale))
+            scaled_h = max(1, int(self.map_height * self.scale))
+            # create a scaled version for fast blits
+            self.map_surface = pygame.transform.scale(self.map_surface, (scaled_w, scaled_h))
+            # update map dimensions to scaled values
+            self.map_width = scaled_w
+            self.map_height = scaled_h
 
     def draw_map(self, surface):
         surface.blit(self.map_surface, (0,0))

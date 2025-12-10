@@ -50,7 +50,10 @@ class sprite(pygame.sprite.Sprite):
 
     def resize_image(self):
         if self.img is not None:
-            self.img = pygame.transform.scale(self.img, (self.width *self.ratio, self.height*self.ratio))
+            # Ensure integer dimensions (>=1) when scaling images
+            w = max(1, int(self.width * self.ratio))
+            h = max(1, int(self.height * self.ratio))
+            self.img = pygame.transform.scale(self.img, (w, h))
 
     def draw(self, surface, position):
         self.set_data()
@@ -241,10 +244,10 @@ class Sonic(sprite):
 
         self.last_update = now
 
-    def enemy_collision(self, enemy, sonic_screen_x, enemy_screen_x):
+    def enemy_collision(self, enemy, sonic_screen_x, sonic_screen_y, enemy_screen_x, enemy_screen_y):
         try:
-            self.rect = pygame.Rect(sonic_screen_x, int(self.y), int(self.width * self.ratio), int(self.height * self.ratio))
-            enemy.rect = pygame.Rect(enemy_screen_x, int(enemy.y), int(enemy.width * enemy.ratio), int(enemy.height * enemy.ratio))
+            self.rect = pygame.Rect(sonic_screen_x, int(sonic_screen_y), int(self.width * self.ratio), int(self.height * self.ratio))
+            enemy.rect = pygame.Rect(enemy_screen_x, int(enemy_screen_y), int(enemy.width * enemy.ratio), int(enemy.height * enemy.ratio))
         except Exception:
             # If width/height not available yet, skip collision this frame
             self.rect = None
@@ -254,7 +257,29 @@ class Sonic(sprite):
         if getattr(self, 'move_type', None) == 'hurt':
             return None
 
+        # Detect stomp (Sonic landing on enemy): require horizontal overlap,
+        # previous bottom below enemy top, current bottom at/after enemy top,
+        # and Sonic moving downward (speed_y > 0).
+        try:
+            prev_bottom = getattr(self, 'prev_y', self.y) + int(self.height * self.ratio)
+        except Exception:
+            prev_bottom = getattr(self, 'prev_y', self.y)
+        try:
+            curr_bottom = self.y + int(self.height * self.ratio)
+        except Exception:
+            curr_bottom = self.y
+
         if self.rect is not None and enemy.rect is not None and self.rect.colliderect(enemy.rect):
+            enemy_top = enemy.y
+            horiz_overlap = True
+            # Stomp condition: was above last frame, now intersects and moving down
+            if prev_bottom < enemy_top and curr_bottom >= enemy_top and getattr(self, 'speed_y', 0) > 0:
+                # Bounce Sonic and indicate enemy was stomped
+                bounce_power = getattr(self, 'JUMP_POWER', -12) // 2
+                self.speed_y = bounce_power
+                self.is_jumping = True
+                return enemy
+
             now = pygame.time.get_ticks()
             # If Sonic is rolling (states like roll_1 .. roll_5), ignore damage
             if not (isinstance(self.state, str) and self.state.startswith("roll_")):
@@ -374,14 +399,24 @@ class Bullet(sprite):
         self.sprite_sheet.set_colorkey((255, 0, 255))
         self.direction = direction
         self.speed = 2
+        self.speed_y = 0
         self.x = x
         self.y = y
 
     def move(self, sonic):
+        # horizontal movement
         if self.direction == "left":
             self.x -= self.speed
         else:
             self.x += self.speed
+
+        # apply gravity so bullets fall until they hit the ground
+        try:
+            grav = getattr(self, 'GRAVITY', 0.5)
+        except Exception:
+            grav = 0.5
+        self.speed_y += grav
+        self.y += self.speed_y
 
 class MotoBug(sprite):
     def __init__(self,ratio,start, state="bug_1"):
@@ -389,10 +424,10 @@ class MotoBug(sprite):
         self.name = "moto_bug"
         self.sprite_sheet = pygame.image.load('resources\\enemies.gif').convert_alpha()
         self.sprite_sheet.set_colorkey((255, 0, 255))
-        self.change = 2
-        self.RANGE = 300
+        self.change = max(1, int(2 * ratio))
+        self.RANGE = max(1, int(300 * ratio))
         self.start = start
-        self.x = 600
+        self.x = int(600 * ratio)
         self.y = self.GROUND_LEVEL
 
     def move(self, sonic):
@@ -428,7 +463,7 @@ class Bomber(sprite):
         self.sprite_sheet = pygame.image.load('resources\\enemies.gif').convert_alpha()
         self.sprite_sheet.set_colorkey((255, 0, 255))
         self.x = x
-        self.y = self.GROUND_LEVEL - 150
+        self.y = self.GROUND_LEVEL - max(1, int(150 * ratio))
 
     def move(self, sonic):
         if abs(sonic.x - self.x) < 300:
@@ -446,7 +481,7 @@ class GreenNewtron(sprite):
         self.name = "green_newtron"
         self.sprite_sheet = pygame.image.load('resources\\enemies.gif').convert_alpha()
         self.sprite_sheet.set_colorkey((255, 0, 255))
-        self.x = 600
+        self.x = int(600 * ratio)
         self.y = self.GROUND_LEVEL
 
 
@@ -457,19 +492,28 @@ class GreenNewtron(sprite):
             if sonic.x < self.x:
                 self.direction = "right"
                 print("Firing bullet to the right")
-                return Bullet(self.x, self.y, self.direction, self.ratio, "yellow")
+                # spawn bullet slightly above the enemy so it is visible
+                try:
+                    y_spawn = int(self.y - (getattr(self, 'height', 0) * self.ratio) // 2)
+                except Exception:
+                    y_spawn = int(self.y - 20)
+                return Bullet(self.x, y_spawn, self.direction, self.ratio, "yellow")
             else:
                 self.direction = "left"
                 print("Firing bullet to the left")
-                return Bullet(self.x + self.width, self.y, self.direction, self.ratio, "yellow")
+                try:
+                    y_spawn = int(self.y - (getattr(self, 'height', 0) * self.ratio) // 2)
+                except Exception:
+                    y_spawn = int(self.y - 20)
+                return Bullet(self.x + getattr(self, 'width', 0), y_spawn, self.direction, self.ratio, "yellow")
         else:
             self.state = "green_newtron_1"
             return None
 
 
     def move(self, sonic):
-        self.attack(sonic)
-        return None
+        # Return any bullet produced by attack so the caller can append it
+        return self.attack(sonic)
             
             
 
@@ -479,7 +523,7 @@ class BlueNewtron(sprite):
         self.name = "blue_newtron"
         self.sprite_sheet = pygame.image.load('resources\\enemies.gif').convert_alpha()
         self.sprite_sheet.set_colorkey((255, 0, 255))
-        self.x = 500
+        self.x = int(500 * ratio)
         self.y = self.GROUND_LEVEL
 
     def move(self, sonic):
@@ -489,10 +533,10 @@ class Chopper(sprite):
     def __init__(self,ratio,state="chopper_1"):
         super().__init__(ratio, state)
         self.name = "chopper"
-        self.start = self.GROUND_LEVEL + 200
+        self.start = self.GROUND_LEVEL + max(1, int(200 * ratio))
         self.sprite_sheet = pygame.image.load('resources\\enemies.gif').convert_alpha()
         self.sprite_sheet.set_colorkey((255, 0, 255))
-        self.x = self.GROUND_LEVEL
+        self.x = int(self.GROUND_LEVEL)
         self.y = self.start
         
     def move(self, sonic):
@@ -509,7 +553,7 @@ class Crabmeat(sprite):
         self.name = "crabmeat"
         self.sprite_sheet = pygame.image.load('resources\\enemies.gif').convert_alpha()
         self.sprite_sheet.set_colorkey((255, 0, 255))
-        self.x = 400
+        self.x = int(400 * ratio)
         self.y = self.GROUND_LEVEL
 
     def move(self, sonic):
