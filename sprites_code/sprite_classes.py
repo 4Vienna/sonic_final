@@ -250,6 +250,10 @@ class Sonic(sprite):
             self.rect = None
             enemy.rect = None
 
+        # If Sonic is currently in a hurt/knockback state, ignore further collisions
+        if getattr(self, 'move_type', None) == 'hurt':
+            return None
+
         if self.rect is not None and enemy.rect is not None and self.rect.colliderect(enemy.rect):
             now = pygame.time.get_ticks()
             # If Sonic is rolling (states like roll_1 .. roll_5), ignore damage
@@ -257,21 +261,31 @@ class Sonic(sprite):
                 if now >= getattr(self, 'invulnerable_until', 0):
                     self.life -= 1
                     self.invulnerable_until = now + 1000  # 1 second invulnerability
-                    
-                    # Bounce back: determine direction and apply knockback
+
+                    # Knockback parameters (tweak values as needed)
+                    knockback_x = 6
+                    knockback_y = -8
+
+                    # Horizontal knockback: push Sonic away from the enemy
                     if enemy.x < self.x:
                         # Enemy is to the left, bounce Sonic right
-                        self.speed = 6
+                        self.speed = knockback_x
                         self.direction = "right"
                     else:
                         # Enemy is to the right, bounce Sonic left
-                        self.speed = -6
+                        self.speed = -knockback_x
                         self.direction = "left"
-                    
-                    # Reset animation state to reflect the bounce
-                    self.move_type = "walk"
+
+                    # Vertical knockback: give Sonic upward velocity and mark as jumping
+                    self.speed_y = knockback_y
+                    self.is_jumping = True
+
+                    # Prevent immediate player input from interfering with knockback
+                    self.x_change = 0
+
+                    # Reset animation state to reflect being hurt/knocked back
+                    self.move_type = "hurt"
                     self.frame = 0
-                    print(f"Sonic hit by MotoBug! Lives left: {self.life}")
             else:
                 return enemy
 
@@ -308,9 +322,26 @@ class Sonic(sprite):
             self.direction = "right"
 
         self.x += self.speed
-        
-        # Wall Collision
+
+        # Detect landing: remember jump state, run collision (which updates is_jumping),
+        # then check whether we just landed this frame and switch to walking if appropriate.
+        prev_jumping = getattr(self, 'is_jumping', False)
         collide = self.collision()
+        if prev_jumping and not getattr(self, 'is_jumping', False):
+            # Sonic just landed
+            now = pygame.time.get_ticks()
+            # Give Sonic 2 seconds of invulnerability after landing; preserve any longer existing invul
+            if self.move_type == "hurt":
+                self.invulnerable_until = max(getattr(self, 'invulnerable_until', 0), now + 2000)
+            if abs(self.speed) > 0:
+                self.move_type = "walk"
+                self.frame = 0
+            else:
+                self.move_type = None
+                self.set_state("idle")
+                self.frame = 0
+
+        # Wall Collision
         if collide:
             self.move_type = "push"
         # Skid logic
@@ -353,7 +384,7 @@ class MotoBug(sprite):
             self.x -= self.change
 
         # Flip direction if we've moved beyond patrol bounds
-        if abs(sonic.x - self.x) < 100:
+        if abs(sonic.x - self.x) < 100 and sonic.y >= self.GROUND_LEVEL:
             if sonic.x < self.x:
                 self.direction = "right"
                 self.x -= self.change
@@ -405,8 +436,6 @@ class GreenNewtron(sprite):
             
             
 
-
-
 class BlueNewtron(sprite):
     def __init__(self,ratio,state="blue_newtron_1"):
         super().__init__(ratio, state)
@@ -423,13 +452,18 @@ class Chopper(sprite):
     def __init__(self,ratio,state="chopper_1"):
         super().__init__(ratio, state)
         self.name = "chopper"
+        self.start = self.GROUND_LEVEL + 200
         self.sprite_sheet = pygame.image.load('resources\\enemies.gif').convert_alpha()
         self.sprite_sheet.set_colorkey((255, 0, 255))
         self.x = 1200
-        self.y = 100
+        self.y = self.start
         
     def move(self, sonic):
-        pass
+        if self.y == self.GROUND_LEVEL -100:
+            self.y_change = 2
+        elif self.y >= self.start:
+            self.y_change = -2
+        self.y += self.y_change
 
 class Crabmeat(sprite):
     def __init__(self,ratio,state="crabmeat_1"):

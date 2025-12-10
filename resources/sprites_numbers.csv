@@ -25,6 +25,8 @@ sonic,push_2,482,621,24,40
 sonic,push_3,544,622,32,40
 sonic,push_4,622,622,24,40
 sonic,pipe_1,35,715,45,32
+sonic,hurt_1,39,810,40,30
+sonic,hurt_2,108,810,40,30
 moto_bug,bug_1,7,8,48,38
 moto_bug,bug_2,55,8,48,38
 moto_bug,bug_3,103,8,77,38
