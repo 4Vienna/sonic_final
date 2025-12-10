@@ -17,6 +17,9 @@ pygame.init()
 
 
 sonic = Sonic(2)
+# Player state: lives and simple invulnerability timer after being hit
+sonic.invulnerable_until = 0
+
 enemies = [MotoBug(2, 400), Bomber(800, 300, 2), GreenNewtron(2), BlueNewtron(2), Chopper(2), Crabmeat(2)]
 
 player_move = False
@@ -142,7 +145,14 @@ while running:
     sonic.draw(screen, (sonic_screen_x, int(sonic.y)))
     for enemy in enemies:
         enemy_screen_x = int(enemy.x - camera_x)
+        enemy.move(sonic)
+        hit = sonic.enemy_collision(enemy, sonic_screen_x, enemy_screen_x)
+        if hit is not None:
+            # Handle enemy defeat logic here
+            enemies.remove(hit)
+            print(f"Defeated {hit.name}!")
         enemy.draw(screen, (enemy_screen_x, int(enemy.y)))
+
     screen.blit(text_surface, text_rect)
 
     pygame.display.flip()

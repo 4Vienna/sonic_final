@@ -62,13 +62,15 @@ class sprite(pygame.sprite.Sprite):
             surface.blit(self.img, position)
     
     def collision(self):
+        # Vertical movement (gravity always applies)
+        self.speed_y += self.GRAVITY
+        self.y += self.speed_y
+        
         # Ground collision
         if self.y >= self.GROUND_LEVEL:
             self.y = self.GROUND_LEVEL
             self.speed_y = 0
             self.is_jumping = False
-
-        #wall collision
         # Use level/world width if provided, otherwise fall back to screen width
         try:
             from sprites_code import sprite_classes as sc
@@ -135,6 +137,7 @@ class Sonic(sprite):
     def __init__(self,ratio,state="idle"):
         super().__init__(ratio, state)
         self.name = "sonic"
+        self.life = 3
         self.ANIM_FPS = 60
         self.SUBIMAGE_FRAMES = 24
         self.PER_SUBIMAGE_MS = int(self.SUBIMAGE_FRAMES * 1000 / self.ANIM_FPS)  # 400 ms
@@ -237,6 +240,42 @@ class Sonic(sprite):
             pass
 
         self.last_update = now
+
+    def enemy_collision(self, enemy, sonic_screen_x, enemy_screen_x):
+        try:
+            self.rect = pygame.Rect(sonic_screen_x, int(self.y), int(self.width * self.ratio), int(self.height * self.ratio))
+            enemy.rect = pygame.Rect(enemy_screen_x, int(enemy.y), int(enemy.width * enemy.ratio), int(enemy.height * enemy.ratio))
+        except Exception:
+            # If width/height not available yet, skip collision this frame
+            self.rect = None
+            enemy.rect = None
+
+        if self.rect is not None and enemy.rect is not None and self.rect.colliderect(enemy.rect):
+            now = pygame.time.get_ticks()
+            # If Sonic is rolling (states like roll_1 .. roll_5), ignore damage
+            if not (isinstance(self.state, str) and self.state.startswith("roll_")):
+                if now >= getattr(self, 'invulnerable_until', 0):
+                    self.life -= 1
+                    self.invulnerable_until = now + 1000  # 1 second invulnerability
+                    
+                    # Bounce back: determine direction and apply knockback
+                    if enemy.x < self.x:
+                        # Enemy is to the left, bounce Sonic right
+                        self.speed = 6
+                        self.direction = "right"
+                    else:
+                        # Enemy is to the right, bounce Sonic left
+                        self.speed = -6
+                        self.direction = "left"
+                    
+                    # Reset animation state to reflect the bounce
+                    self.move_type = "walk"
+                    self.frame = 0
+                    print(f"Sonic hit by MotoBug! Lives left: {self.life}")
+            else:
+                return enemy
+
+
     def move(self):
         MAX_SPEED = 6
 
@@ -269,16 +308,6 @@ class Sonic(sprite):
             self.direction = "right"
 
         self.x += self.speed
-        
-        # Vertical movement (gravity always applies)
-        self.speed_y += self.GRAVITY
-        self.y += self.speed_y
-        
-        # Ground collision
-        if self.y >= self.GROUND_LEVEL:
-            self.y = self.GROUND_LEVEL
-            self.speed_y = 0
-            self.is_jumping = False
         
         # Wall Collision
         collide = self.collision()
@@ -326,10 +355,10 @@ class MotoBug(sprite):
         # Flip direction if we've moved beyond patrol bounds
         if abs(sonic.x - self.x) < 100:
             if sonic.x < self.x:
-                self.direction = "left"
+                self.direction = "right"
                 self.x -= self.change
             else:
-                self.direction = "right"
+                self.direction = "left"
                 self.x += self.change
         elif self.x <= (self.start - self.RANGE):
             self.x = self.start - self.RANGE
@@ -337,6 +366,7 @@ class MotoBug(sprite):
         elif self.x >= (self.start + self.RANGE):
             self.x = self.start + self.RANGE
             self.direction = "right"
+
          
 
 class Bomber(sprite):
@@ -347,6 +377,14 @@ class Bomber(sprite):
         self.sprite_sheet.set_colorkey((255, 0, 255))
         self.x = x
         self.y = y
+
+    def move(self, sonic):
+        if abs(sonic.x - self.x) < 300:
+            if sonic.x < self.x:
+                self.direction = "left"
+            else:
+                self.direction = "right"
+            
 
 
 class GreenNewtron(sprite):
@@ -360,7 +398,10 @@ class GreenNewtron(sprite):
 
     def attack(self, sonic):
         if abs(sonic.x - self.x) < 200:
-            self.set_state("green_newtron_2")
+            self.state = "attack_2"
+
+    def move(self, sonic):
+        self.attack(sonic)
             
             
 
@@ -375,6 +416,9 @@ class BlueNewtron(sprite):
         self.x = 1000
         self.y = 200
 
+    def move(self, sonic):
+        pass
+
 class Chopper(sprite):
     def __init__(self,ratio,state="chopper_1"):
         super().__init__(ratio, state)
@@ -383,6 +427,9 @@ class Chopper(sprite):
         self.sprite_sheet.set_colorkey((255, 0, 255))
         self.x = 1200
         self.y = 100
+        
+    def move(self, sonic):
+        pass
 
 class Crabmeat(sprite):
     def __init__(self,ratio,state="crabmeat_1"):
@@ -392,3 +439,6 @@ class Crabmeat(sprite):
         self.sprite_sheet.set_colorkey((255, 0, 255))
         self.x = 1400
         self.y = 200
+
+    def move(self, sonic):
+        pass
