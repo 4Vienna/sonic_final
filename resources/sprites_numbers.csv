@@ -54,3 +54,7 @@ crabmeat,crabmeat_1,231,8,44,32
 crabmeat,crabmeat_2,290,8,44,32
 crabmeat,crabmeat_3,340,8,44,32
 crabmeat,crabmeat_4,412,8,49,32
+lives_box,box,5,9,49,60
+score,score,68,10,34,9
+time,times_yellow,109,10,28,9
+rings,rings_yellow,144,10,28,9

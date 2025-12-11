@@ -10,9 +10,13 @@ bg_width, bg_height = background_img.get_size()
 # Camera offset (world x position of left edge of screen)
 camera_x = 0
 
-# NOTE: will set level width after tilemap is loaded (below)
-
 pygame.init()
+
+#time variables
+start_time = pygame.time.get_ticks()
+last_update = pygame.time.get_ticks()
+clock = pygame.time.Clock()
+FPS = 60
 
 # Compute Sonic scale so his on-screen height matches original proportion
 # Original: Sonic was 48 px tall on a 480 px screen -> 10% of screen height
@@ -87,17 +91,20 @@ for e in enemies:
         pass
 
 
-last_update = pygame.time.get_ticks()
 
 
-text_set = pygame.font.SysFont(None, 30)
+def display_text(text, font_size, position, color=(255, 255, 255)):
+    font = pygame.font.SysFont(None, font_size)
+    text_surface = font.render(text, True, color)
+    screen.blit(text_surface, position)
 
-clock = pygame.time.Clock()
-FPS = 60
+
 running = True
 while running:
     # store previous vertical position for collision detection (stomp)
     sonic.prev_y = sonic.y
+
+    #Event handling
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             running = False
@@ -135,8 +142,7 @@ while running:
                     sonic.x_change = 0
                     # leaving idle; reset idle timer
                     sonic.idle_start_time = None
-                    
-                    
+                            
         if event.type == pygame.KEYUP:
             if event.key == pygame.K_LEFT or event.key == pygame.K_RIGHT:
                 player_move = False
@@ -154,6 +160,12 @@ while running:
                     sonic.move_type = None
                     sonic.x_change = 0
             
+    # Update clock time in seconds and minutes
+    current_time = pygame.time.get_ticks()
+    elapsed_time = (current_time - start_time) // 1000   
+
+    minutes = elapsed_time // 60
+    seconds = elapsed_time % 60     
 
     # Always update movement while player is actively moving or while
     # Sonic is in the air (jumping) so gravity is applied.
@@ -209,8 +221,6 @@ while running:
     # Draw tilemap (pre-rendered) with same camera offset so tiles scroll
     if 'tilemap' in globals() and getattr(tilemap, 'map_surface', None) is not None:
         screen.blit(tilemap.map_surface, (-int(camera_x), -int(camera_y)))
-    text_surface = text_set.render(f"Sonic position: {sonic.x} direction: {sonic.direction} speed: {sonic.speed} change: {sonic.x_change} state: {sonic.move_type} frame: {sonic.frame}", True, (255,255,255))
-    text_rect = text_surface.get_rect(topleft=(0, 0))
     
     # Convert world coordinates to screen coordinates using camera_x and camera_y
     sonic_screen_x = int(sonic.x - camera_x)
@@ -265,7 +275,10 @@ while running:
             print(f"Defeated {hit.name}!")
         enemy.draw(screen, (enemy_screen_x, enemy_screen_y))
 
-    screen.blit(text_surface, text_rect)
+    # Display score, time, rings
+    info = [f"SCORE {sonic.score}", f"TIME {minutes:02d}:{seconds:02d}", f"RINGS {sonic.rings}"]
+    for i, text in enumerate(info):
+        display_text(text, 30, (0, 5 + (i*30)))
 
     pygame.display.flip()
     clock.tick(FPS)

@@ -141,6 +141,8 @@ class Sonic(sprite):
         super().__init__(ratio, state)
         self.name = "sonic"
         self.life = 3
+        self.score = 0
+        self.rings = 0
         self.ANIM_FPS = 60
         self.SUBIMAGE_FRAMES = 24
         self.PER_SUBIMAGE_MS = int(self.SUBIMAGE_FRAMES * 1000 / self.ANIM_FPS)  # 400 ms
