@@ -1,0 +1,2 @@
+
+                rings.remove(pickup)

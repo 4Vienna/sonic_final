@@ -29,6 +29,9 @@ def get_sprite_data(sprite_name):
 
 def get_all_sprites_of_type(sprite_name, sprite_type):
     result = []
+    # Handle None sprite_type gracefully
+    if sprite_type is None:
+        return result
     for sprite in sprites_data.keys():
         if sprite.startswith(sprite_name) and sprite_type in sprite:
             sprite = sprite.replace(f"{sprite_name}_", "")

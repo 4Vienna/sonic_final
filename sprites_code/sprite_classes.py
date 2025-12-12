@@ -6,7 +6,7 @@ from helpers.displays import screen, SCREEN_WIDTH, SCREEN_HEIGHT
 
 
 
-class sprite(pygame.sprite.Sprite):
+class Sprite(pygame.sprite.Sprite):
     def __init__(self,ratio, state=None):
         super().__init__()
         self.name = None
@@ -31,6 +31,7 @@ class sprite(pygame.sprite.Sprite):
         self.sprite_sheet = None
         self.GROUND_LEVEL = 500
         self.GRAVITY = 0.5
+        
     def set_data(self):
         if self.state is not None and self.name is not None:
             data = get_sprite_data(f"{self.name}_{self.state}")
@@ -47,6 +48,11 @@ class sprite(pygame.sprite.Sprite):
         if colorkey is not None:
             image.set_colorkey(colorkey)
         self.img = image
+        # Ensure mask is up to date for collision checks (resize will update it too)
+        try:
+            self.mask = pygame.mask.from_surface(self.img)
+        except Exception:
+            self.mask = None
 
     def resize_image(self):
         if self.img is not None:
@@ -54,22 +60,133 @@ class sprite(pygame.sprite.Sprite):
             w = max(1, int(self.width * self.ratio))
             h = max(1, int(self.height * self.ratio))
             self.img = pygame.transform.scale(self.img, (w, h))
+            # update mask to match resized image
+            try:
+                self.mask = pygame.mask.from_surface(self.img)
+            except Exception:
+                self.mask = None
 
     def draw(self, surface, position):
         self.set_data()
         self.set_image()
-        if self.direction == "left" and self.img is not None:
-            self.img = pygame.transform.flip(self.img, True, False)
+        # Do not mutate the stored image when flipping; use a temporary image for drawing
         if self.img is not None:
             self.resize_image()
-            surface.blit(self.img, position)
+            img_to_draw = self.img
+            if self.direction == "left":
+                try:
+                    img_to_draw = pygame.transform.flip(self.img, True, False)
+                except Exception:
+                    img_to_draw = self.img
+            surface.blit(img_to_draw, position)
     
     def collision(self):
-        # Vertical movement (gravity always applies)
+        # Apply gravity and update vertical position
         self.speed_y += self.GRAVITY
-        self.y += self.speed_y
-        
-        # Ground collision
+
+        # Try pixel-perfect collision with the tilemap using masks when available
+        try:
+            if 'tilemap' in globals() and getattr(tilemap, 'map_surface', None) is not None:
+                tm = globals()['tilemap']
+                # ensure sprite image and mask exist (resize will update mask)
+                if getattr(self, 'img', None) is None or getattr(self, 'mask', None) is None:
+                    try:
+                        self.set_image()
+                        self.resize_image()
+                    except Exception:
+                        pass
+
+                try:
+                    sprite_w = int(getattr(self, 'width', 0) * self.ratio)
+                    sprite_h = int(getattr(self, 'height', 0) * self.ratio)
+                except Exception:
+                    sprite_w = 0
+                    sprite_h = 0
+
+                # Desired next Y after gravity
+                next_y = self.y + self.speed_y
+
+                # Build sprite rect in world coords for next position
+                sprite_rect_next = pygame.Rect(int(self.x), int(next_y), max(1, sprite_w), max(1, sprite_h))
+
+                # Tilemap rect in world coords
+                map_origin_x = int(getattr(tm, 'map_origin_x', 0))
+                map_origin_y = int(getattr(tm, 'map_origin_y', 0))
+                map_rect = pygame.Rect(map_origin_x, map_origin_y, getattr(tm, 'map_width', 0), getattr(tm, 'map_height', 0))
+
+                # If sprite intersects tilemap, check mask overlap
+                if sprite_rect_next.colliderect(map_rect) and getattr(self, 'mask', None) is not None:
+                    # Create a surface the size of the sprite and blit the corresponding tilemap region onto it
+                    local_x = sprite_rect_next.x - map_origin_x
+                    local_y = sprite_rect_next.y - map_origin_y
+                    # Prepare an empty surface for tile pixels under the sprite
+                    try:
+                        tile_region = pygame.Surface((sprite_rect_next.width, sprite_rect_next.height), pygame.SRCALPHA)
+                        # Source rect on the map surface (clamped)
+                        src_rect = pygame.Rect(local_x, local_y, sprite_rect_next.width, sprite_rect_next.height)
+                        src_rect_clamped = src_rect.clip(pygame.Rect(0, 0, tm.map_width, tm.map_height))
+                        if src_rect_clamped.width > 0 and src_rect_clamped.height > 0:
+                            # blit visible portion
+                            tile_region.blit(tm.map_surface, (src_rect_clamped.x - src_rect.x, src_rect_clamped.y - src_rect.y), src_rect_clamped)
+                        # Create mask for the tile region and test overlap
+                        try:
+                            tile_mask = pygame.mask.from_surface(tile_region)
+                        except Exception:
+                            tile_mask = None
+
+                        overlap = None
+                        if tile_mask is not None:
+                            # sprite mask should align with tile_region (both in sprite-local coords)
+                            overlap = getattr(self, 'mask', None).overlap(tile_mask, (0, 0))
+
+                        if overlap:
+                            # Collision detected at next_y: resolve by moving sprite up until no overlap
+                            resolve_y = int(next_y)
+                            max_iters = sprite_h + 4
+                            it = 0
+                            while it < max_iters:
+                                resolve_rect = pygame.Rect(int(self.x), resolve_y, sprite_rect_next.width, sprite_rect_next.height)
+                                local_x = resolve_rect.x - map_origin_x
+                                local_y = resolve_rect.y - map_origin_y
+                                src_rect = pygame.Rect(local_x, local_y, resolve_rect.width, resolve_rect.height)
+                                src_rect_clamped = src_rect.clip(pygame.Rect(0, 0, tm.map_width, tm.map_height))
+                                tile_region.fill((0, 0, 0, 0))
+                                if src_rect_clamped.width > 0 and src_rect_clamped.height > 0:
+                                    tile_region.blit(tm.map_surface, (src_rect_clamped.x - src_rect.x, src_rect_clamped.y - src_rect.y), src_rect_clamped)
+                                tile_mask = pygame.mask.from_surface(tile_region)
+                                if getattr(self, 'mask', None) is None:
+                                    break
+                                if not getattr(self, 'mask').overlap(tile_mask, (0, 0)):
+                                    # found a non-overlapping Y
+                                    self.y = resolve_y
+                                    self.speed_y = 0
+                                    self.is_jumping = False
+                                    break
+                                resolve_y -= 1
+                                it += 1
+                            else:
+                                # fallback to map bottom
+                                self.y = map_origin_y + tm.map_height - sprite_h
+                                self.speed_y = 0
+                                self.is_jumping = False
+                        else:
+                            # No overlap at next_y — apply it
+                            self.y = next_y
+                    except Exception:
+                        # If mask-based approach fails, fall back to simple placement
+                        self.y = next_y
+                else:
+                    # Not intersecting map — simply apply vertical motion
+                    self.y = next_y
+            else:
+                # No tilemap — apply vertical motion
+                self.y += self.speed_y
+        except Exception:
+            # On any error, fall back to simple physics
+            self.speed_y += 0
+            self.y += self.speed_y
+
+        # Ground collision fallback (if no tilemap collision resolved)
         if self.y >= self.GROUND_LEVEL:
             self.y = self.GROUND_LEVEL
             self.speed_y = 0
@@ -85,6 +202,38 @@ class sprite(pygame.sprite.Sprite):
             max_x = LEVEL_WIDTH_LOCAL - (self.width * self.ratio)
         else:
             max_x = SCREEN_WIDTH - (self.width * self.ratio)
+
+        # Horizontal tile collisions: if a tilemap exists, block movement into tile index 0
+        try:
+            if 'tilemap' in globals() and getattr(tilemap, 'map_surface', None) is not None:
+                tm = globals()['tilemap']
+                try:
+                    sprite_h = int(getattr(self, 'height', 0) * self.ratio)
+                    sprite_w = int(getattr(self, 'width', 0) * self.ratio)
+                except Exception:
+                    sprite_h = 0
+                    sprite_w = 0
+                mid_y = int(self.y + max(1, sprite_h) // 2)
+                # moving right: check tile at right edge
+                if getattr(self, 'speed', 0) > 0:
+                    check_x = int(self.x + max(1, sprite_w))
+                    if tm.is_solid_at(check_x, mid_y):
+                        # snap to left side of the blocking tile
+                        tile_w_world = int(tm.tile_size * tm.scale)
+                        col = int(check_x // tile_w_world)
+                        self.x = col * tile_w_world - sprite_w
+                        return True
+                # moving left: check tile at left edge
+                if getattr(self, 'speed', 0) < 0:
+                    check_x = int(self.x - 1)
+                    if tm.is_solid_at(check_x, mid_y):
+                        tile_w_world = int(tm.tile_size * tm.scale)
+                        col = int(check_x // tile_w_world)
+                        # snap to right side of the blocking tile
+                        self.x = (col + 1) * tile_w_world
+                        return True
+        except Exception:
+            pass
 
         if self.x >= max_x:
             self.x = max_x
@@ -135,8 +284,36 @@ def set_level_width(w):
     global LEVEL_WIDTH
     LEVEL_WIDTH = w
 
+class Words(Sprite):
+    def __init__(self,ratio,name, x=5, y= 5):
+        super().__init__(ratio, name)
+        self.name = name
+        self.sprite_sheet = pygame.image.load('resources\\fonts.png').convert_alpha()
+        self.sprite_sheet.set_colorkey((144, 0, 0))
+        self.x = x
+        self.y = y
 
-class Sonic(sprite):
+    def set_state(self, data):
+        if data == 0:
+            self.state = f"{self.name}_red"
+        else:
+            self.state = f"{self.name}_yellow"
+    
+
+    def set_dimensions(self):
+        try:
+            self.width = int(getattr(self, 'width', 0) * getattr(self, 'ratio', 1))
+        except Exception:
+            self.width = 0
+
+        try:
+            self.height = int(getattr(self, 'height', 0) * getattr(self, 'ratio', 1))
+        except Exception:
+            self.height = 0
+
+        
+
+class Sonic(Sprite):
     def __init__(self,ratio,state="idle"):
         super().__init__(ratio, state)
         self.name = "sonic"
@@ -159,12 +336,13 @@ class Sonic(sprite):
         self.speed_y = 0
         self.sprite_sheet = pygame.image.load('resources\\sonic_sprites.png').convert_alpha()
         self.sprite_sheet.set_colorkey((67, 153, 49))
+        self.rect = None
 
     def set_state(self, new_state):
         self.state = new_state
 
     def jump(self):
-        if not self.is_jumping and self.y >= self.GROUND_LEVEL:
+        if not self.is_jumping and self.y <= self.GROUND_LEVEL:
             self.is_jumping = True
             self.speed_y = self.JUMP_POWER
             self.move_type = "roll"
@@ -204,7 +382,9 @@ class Sonic(sprite):
 
         # Phase 4+: tapping — switch to impatient/tapping move_type
         self.move_type = 'impatient'
-        # let generic animation() cycle impatient frames
+
+
+
     def animation(self):
         # update idle-phase state machine first
         self.waiting()
@@ -316,6 +496,24 @@ class Sonic(sprite):
             else:
                 return enemy
 
+    def vertical_collision(self, platform_y):
+        try:
+            sprite_h = int(getattr(self, 'height', 0) * self.ratio)
+        except Exception:
+            sprite_h = 0
+
+        # Desired next Y after gravity
+        next_y = self.y + self.speed_y
+
+        # Check if landing on platform
+        if (self.y + sprite_h <= platform_y) and (next_y + sprite_h >= platform_y):
+            # Snap to platform top
+            self.y = platform_y - sprite_h
+            self.speed_y = 0
+            self.is_jumping = False
+        else:
+            # No collision; apply vertical motion
+            self.y = next_y
 
     def move(self):
         MAX_SPEED = 6
@@ -353,6 +551,7 @@ class Sonic(sprite):
         # Detect landing: remember jump state, run collision (which updates is_jumping),
         # then check whether we just landed this frame and switch to walking if appropriate.
         prev_jumping = getattr(self, 'is_jumping', False)
+        self.vertical_collision(self.GROUND_LEVEL)
         collide = self.collision()
         if prev_jumping and not getattr(self, 'is_jumping', False):
             # Sonic just landed
@@ -367,7 +566,6 @@ class Sonic(sprite):
                 self.move_type = None
                 self.set_state("idle")
                 self.frame = 0
-
         # Wall Collision
         if collide:
             self.move_type = "push"
@@ -392,7 +590,7 @@ class Sonic(sprite):
             self.frame = 0
         self.set_state(images[self.frame])
 
-class Bullet(sprite):
+class Bullet(Sprite):
     def __init__(self,x,y,direction,ratio,color):
         super().__init__(ratio)
         self.name = "bullet"
@@ -420,17 +618,18 @@ class Bullet(sprite):
         self.speed_y += grav
         self.y += self.speed_y
 
-class MotoBug(sprite):
-    def __init__(self,ratio,start, state="bug_1"):
+class MotoBug(Sprite):
+    def __init__(self,ratio, start, speed_y=0, state="bug_1"):
         super().__init__(ratio, state)
         self.name = "moto_bug"
         self.sprite_sheet = pygame.image.load('resources\\enemies.gif').convert_alpha()
         self.sprite_sheet.set_colorkey((255, 0, 255))
         self.change = max(1, int(2 * ratio))
-        self.RANGE = max(1, int(300 * ratio))
+        self.RANGE = max(1, int(100 * ratio))
         self.start = start
         self.x = int(600 * ratio)
         self.y = self.GROUND_LEVEL
+        self.speed_y = speed_y
 
     def move(self, sonic):
         # Move left/right based on current direction.
@@ -438,6 +637,7 @@ class MotoBug(sprite):
             self.x += self.change
         else:
             self.x -= self.change
+        self.collision()
 
         # Flip direction if we've moved beyond patrol bounds
         if abs(sonic.x - self.x) < 100 and sonic.y >= self.GROUND_LEVEL:
@@ -458,7 +658,7 @@ class MotoBug(sprite):
 
          
 
-class Bomber(sprite):
+class Bomber(Sprite):
     def __init__(self, ratio,x,state="attack_2"):
         super().__init__(ratio, state)
         self.name = "buzz_bomber"
@@ -477,7 +677,7 @@ class Bomber(sprite):
             
 
 
-class GreenNewtron(sprite):
+class GreenNewtron(Sprite):
     def __init__(self,ratio,state="green_newtron_1"):
         super().__init__(ratio, state)
         self.name = "green_newtron"
@@ -519,7 +719,7 @@ class GreenNewtron(sprite):
             
             
 
-class BlueNewtron(sprite):
+class BlueNewtron(Sprite):
     def __init__(self,ratio,state="blue_newtron_1"):
         super().__init__(ratio, state)
         self.name = "blue_newtron"
@@ -531,7 +731,7 @@ class BlueNewtron(sprite):
     def move(self, sonic):
         return None
 
-class Chopper(sprite):
+class Chopper(Sprite):
     def __init__(self,ratio,state="chopper_1"):
         super().__init__(ratio, state)
         self.name = "chopper"
@@ -549,7 +749,7 @@ class Chopper(sprite):
         self.y += self.y_change
         return None
 
-class Crabmeat(sprite):
+class Crabmeat(Sprite):
     def __init__(self,ratio,state="crabmeat_1"):
         super().__init__(ratio, state)
         self.name = "crabmeat"
@@ -560,3 +760,27 @@ class Crabmeat(sprite):
 
     def move(self, sonic):
         return None
+    
+
+class Rings(Sprite):
+    def __init__(self,ratio,state="ring_1"):
+        super().__init__(ratio, state)
+        self.name = "ring"
+        self.sprite_sheet = pygame.image.load('resources\\rings_sprites.png').convert_alpha()
+        self.sprite_sheet.set_colorkey((135, 16, 19))
+        self.x = int(400 * ratio)
+        self.y = self.GROUND_LEVEL - max(1, int(50 * ratio))
+
+    def collect(self, sonic, ring_screen_x, ring_screen_y, sonic_screen_x, sonic_screen_y):
+        try:
+            self.rect = pygame.Rect(ring_screen_x, int(ring_screen_y), int(self.width * self.ratio), int(self.height * self.ratio))
+            sonic.rect = pygame.Rect(sonic_screen_x, int(sonic_screen_y), int(sonic.width * sonic.ratio), int(sonic.height * sonic.ratio))
+        except Exception:
+            # If width/height not available yet, skip collision this frame
+            self.rect = None
+            sonic.rect = None
+
+        if self.rect is not None and sonic.rect is not None and self.rect.colliderect(sonic.rect):
+            sonic.rings += 1
+            return True
+        return False

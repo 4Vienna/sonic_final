@@ -1,4 +1,9 @@
+import os
 import pygame
+
+# Force the SDL window to open at the top of the screen (x=0, y=0).
+# This must be set before creating the display surface.
+os.environ.setdefault('SDL_VIDEO_WINDOW_POS', '0,0')
 
 # Get the native screen height from the display
 display_info = pygame.display.get_surface() or pygame.display.set_mode((1, 1))
